@@ -16,7 +16,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 └── docs
     ├── 01-contexto-e-objetivo.md
     ├── 02-requisitos-iniciais.md
-    └── 03-premissas-restricoes-e-decisoes.md
+    ├── 03-premissas-restricoes-e-decisoes.md
+    └── 04-arquitetura-logica.md
 ```
 
 ## Documentação
@@ -24,6 +25,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [Contexto e objetivo](docs/01-contexto-e-objetivo.md)
 - [Requisitos iniciais](docs/02-requisitos-iniciais.md)
 - [Premissas, restrições e decisões](docs/03-premissas-restricoes-e-decisoes.md)
+- [Arquitetura lógica](docs/04-arquitetura-logica.md)
 
 ## Idioma do Projeto
 
@@ -34,6 +36,5 @@ A documentação do projeto será mantida em português. Quando houver código, 
 As próximas entregas devem evoluir o repositório em partes pequenas e commitáveis, por exemplo:
 
 1. Refinar requisitos funcionais e não funcionais.
-2. Desenhar a arquitetura lógica.
-3. Documentar decisões arquiteturais.
-4. Criar a base inicial de implementação.
+2. Documentar decisões arquiteturais.
+3. Criar a base inicial de implementação.
