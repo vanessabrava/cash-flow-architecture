@@ -89,6 +89,12 @@ Endpoint inicial disponível:
 GET /health
 ```
 
+Documentação navegável da API em ambiente de desenvolvimento:
+
+```text
+http://localhost:5099/swagger
+```
+
 Endpoints de lançamentos disponíveis nesta etapa:
 
 ```http
@@ -185,7 +191,8 @@ Arquivo `.vscode/launch.json`:
       "stopAtEntry": false,
       "serverReadyAction": {
         "action": "openExternally",
-        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/swagger"
       },
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
@@ -207,7 +214,19 @@ Depois disso:
 2. Acesse a aba Run and Debug.
 3. Selecione `Run CashFlowArchitecture.Api`.
 4. Execute a aplicação.
-5. Acesse `http://localhost:5099/health`.
+5. O VS Code deve abrir `http://localhost:5099/swagger` automaticamente.
+
+Se o navegador não abrir automaticamente, acesse manualmente:
+
+```text
+http://localhost:5099/swagger
+```
+
+Para validar a saúde da API:
+
+```http
+GET http://localhost:5099/health
+```
 
 Se o VS Code exibir erro como `dotnet: command not found` ao depurar, o problema é que o VS Code não encontrou o SDK do .NET no PATH usado pela extensão. Confirme o caminho com `which dotnet`, atualize `.vscode/settings.json`, `.vscode/tasks.json` e `.vscode/launch.json`, depois feche e abra o VS Code novamente.
 
@@ -224,5 +243,5 @@ Isso faz o VS Code herdar o mesmo PATH do terminal. Outra alternativa é criar u
 As próximas entregas devem evoluir o repositório em partes pequenas e commitáveis, por exemplo:
 
 1. Refinar requisitos funcionais e não funcionais.
-2. Adicionar Swagger para documentação navegável da API.
-3. Evoluir persistência para banco de dados quando necessário.
+2. Evoluir persistência para PostgreSQL com EF Core quando necessário.
+3. Implementar consolidação diária.

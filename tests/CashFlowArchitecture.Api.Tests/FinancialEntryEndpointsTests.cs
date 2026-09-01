@@ -100,6 +100,19 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
             detail => detail.GetProperty("field").GetString() == "amount");
     }
 
+    [Fact]
+    public async Task SwaggerDocument_IsAvailableInDevelopment()
+    {
+        using var response = await client.GetAsync("/swagger/v1/swagger.json");
+        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(body.RootElement.TryGetProperty("paths", out var paths));
+        Assert.True(paths.TryGetProperty("/entries", out _));
+
+        Assert.True(HasStringEntryTypeSchema(body.RootElement));
+    }
+
     public void Dispose()
     {
         client.Dispose();
@@ -108,5 +121,36 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         {
             File.Delete(entriesFilePath);
         }
+    }
+
+    private static bool HasStringEntryTypeSchema(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            if (element.TryGetProperty("type", out var type)
+                && type.ValueKind == JsonValueKind.String
+                && type.GetString() == "string"
+                && element.TryGetProperty("enum", out var enumValues))
+            {
+                var values = enumValues.EnumerateArray()
+                    .Select(value => value.GetString())
+                    .ToArray();
+
+                if (values.Contains("CREDIT") && values.Contains("DEBIT"))
+                {
+                    return true;
+                }
+            }
+
+            return element.EnumerateObject()
+                .Any(property => HasStringEntryTypeSchema(property.Value));
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            return element.EnumerateArray().Any(HasStringEntryTypeSchema);
+        }
+
+        return false;
     }
 }

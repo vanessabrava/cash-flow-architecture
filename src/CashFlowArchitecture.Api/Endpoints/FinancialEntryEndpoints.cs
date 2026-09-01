@@ -12,8 +12,15 @@ internal static class FinancialEntryEndpoints
     {
         var entries = app.MapGroup("/entries");
 
-        entries.MapPost("/", Create);
-        entries.MapGet("/", GetByDate);
+        entries.MapPost("/", Create)
+            .WithName("CreateFinancialEntry")
+            .WithSummary("Cria um lançamento financeiro.")
+            .WithDescription("Registra um lançamento financeiro de crédito ou débito e retorna seu UID público.");
+
+        entries.MapGet("/", GetByDate)
+            .WithName("GetFinancialEntriesByDate")
+            .WithSummary("Consulta lançamentos por data.")
+            .WithDescription("Retorna os lançamentos financeiros registrados para a data informada.");
     }
 
     private static IResult Create(
