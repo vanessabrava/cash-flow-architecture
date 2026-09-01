@@ -73,6 +73,15 @@ Endpoint inicial disponível:
 GET /health
 ```
 
+Endpoints de lançamentos disponíveis nesta etapa:
+
+```http
+POST /entries
+GET /entries?date=2026-09-01
+```
+
+Nesta primeira implementação, os lançamentos são mantidos em memória. A persistência em banco de dados será adicionada em uma etapa futura.
+
 ### Visual Studio Code
 
 As configurações locais do VS Code ficam na pasta `.vscode/`. Essa pasta não é versionada porque pode conter preferências específicas de cada desenvolvedor.
@@ -193,5 +202,5 @@ Isso faz o VS Code herdar o mesmo PATH do terminal. Outra alternativa é criar u
 As próximas entregas devem evoluir o repositório em partes pequenas e commitáveis, por exemplo:
 
 1. Refinar requisitos funcionais e não funcionais.
-2. Implementar o domínio de lançamentos financeiros.
-3. Criar testes automatizados para as primeiras regras de negócio.
+2. Criar testes automatizados para as primeiras regras de negócio.
+3. Implementar persistência dos lançamentos financeiros.
