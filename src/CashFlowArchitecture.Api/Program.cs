@@ -23,3 +23,5 @@ app.MapGet("/health", () => Results.Ok(new
 app.MapFinancialEntryEndpoints();
 
 app.Run();
+
+public partial class Program;

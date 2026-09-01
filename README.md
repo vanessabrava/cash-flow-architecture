@@ -26,10 +26,14 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   ├── 06-modelo-de-dados.md
 │   ├── 07-resiliencia-e-observabilidade.md
 │   └── 08-estrategia-de-testes.md
-└── src
-    └── CashFlowArchitecture.Api
-        ├── CashFlowArchitecture.Api.csproj
-        └── Program.cs
+├── src
+│   └── CashFlowArchitecture.Api
+│       ├── CashFlowArchitecture.Api.csproj
+│       └── Program.cs
+└── tests
+    └── CashFlowArchitecture.Api.Tests
+        ├── CashFlowArchitecture.Api.Tests.csproj
+        └── FinancialEntryEndpointsTests.cs
 ```
 
 ## Documentação
@@ -65,6 +69,18 @@ Para executar a API localmente:
 
 ```bash
 dotnet run --project src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj
+```
+
+Para compilar a solução:
+
+```bash
+dotnet build CashFlowArchitecture.slnx
+```
+
+Para executar os testes automatizados:
+
+```bash
+dotnet test CashFlowArchitecture.slnx
 ```
 
 Endpoint inicial disponível:
@@ -202,5 +218,5 @@ Isso faz o VS Code herdar o mesmo PATH do terminal. Outra alternativa é criar u
 As próximas entregas devem evoluir o repositório em partes pequenas e commitáveis, por exemplo:
 
 1. Refinar requisitos funcionais e não funcionais.
-2. Criar testes automatizados para as primeiras regras de negócio.
-3. Implementar persistência dos lançamentos financeiros.
+2. Implementar persistência dos lançamentos financeiros.
+3. Adicionar Swagger para documentação navegável da API.
