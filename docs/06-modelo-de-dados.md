@@ -65,6 +65,7 @@ Representa a notificação de que um lançamento financeiro foi criado.
 | Campo | Tipo Conceitual | Obrigatório | Descrição |
 | --- | --- | --- | --- |
 | eventUid | GUID | Sim | Identificador público do evento. |
+| correlationId | GUID | Sim | Identificador usado para rastrear a jornada entre API, evento e consolidação. |
 | eventType | texto | Sim | Nome do evento: `EntryCreated`. |
 | occurredAt | data/hora | Sim | Momento em que o evento foi gerado. |
 | entryUid | GUID | Sim | UID público do lançamento criado. |

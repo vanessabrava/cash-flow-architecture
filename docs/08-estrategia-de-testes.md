@@ -13,6 +13,7 @@ A estratégia de testes deve garantir que:
 - eventos duplicados não gerem saldo duplicado;
 - falhas de consolidação possam ser diagnosticadas e reprocessadas;
 - contratos públicos não exponham IDs internos do banco de dados.
+- `correlationId` seja retornado e propagado entre API, eventos e consolidação.
 
 ## Pirâmide de Testes
 
@@ -51,6 +52,8 @@ Testes de API devem validar contratos HTTP, payloads e códigos de resposta.
 
 As respostas públicas devem retornar `uid`, `entryUid` ou `eventUid` quando necessário. O campo `id` interno não deve aparecer em respostas públicas.
 
+Também deve ser validado que as respostas retornam `correlationId` e que a API respeita o valor recebido no header `X-Correlation-Id`.
+
 ## Testes de Integração
 
 Testes de integração devem validar a comunicação entre componentes.
@@ -61,6 +64,7 @@ Testes de integração devem validar a comunicação entre componentes.
 | API de Lançamentos e canal de eventos | Publicar evento após criação de lançamento. |
 | Processador de Consolidação e canal de eventos | Consumir evento e atualizar saldo da data. |
 | Processador de Consolidação e base de saldos | Persistir totais de crédito, débito e saldo final. |
+| Rastreabilidade entre componentes | Propagar o mesmo `correlationId` da requisição para o evento e para os logs de consolidação. |
 
 ## Testes de Resiliência
 

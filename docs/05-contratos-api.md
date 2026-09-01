@@ -11,6 +11,25 @@ Este documento descreve uma proposta inicial de contratos HTTP para as capacidad
 - Nomes de campos de API serão escritos em inglês.
 - O ID interno do banco de dados não será exposto nas APIs.
 - O ID interno será usado apenas para índices, chaves internas e relacionamentos na persistência.
+- Requisições devem aceitar o header `X-Correlation-Id` para rastreabilidade ponta a ponta.
+- Quando o consumidor não enviar `X-Correlation-Id`, a API deve gerar um novo `correlationId`.
+- Respostas devem retornar o `correlationId` para facilitar diagnóstico e suporte.
+
+## Rastreabilidade
+
+O `correlationId` identifica uma jornada técnica entre componentes. Ele não identifica uma entidade de negócio, como lançamento ou saldo, mas ajuda a rastrear uma requisição desde a entrada na API até a publicação do evento e o processamento da consolidação.
+
+### Header de Requisição
+
+```http
+X-Correlation-Id: 4a11b94c-45b7-4a48-9cb4-917ecf2c7f31
+```
+
+### Header de Resposta
+
+```http
+X-Correlation-Id: 4a11b94c-45b7-4a48-9cb4-917ecf2c7f31
+```
 
 ## API de Lançamentos
 
@@ -50,6 +69,7 @@ POST /entries
 
 ```json
 {
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
   "uid": "0f0b8b8d-5022-4b62-9e38-7b6f6a87f121",
   "type": "CREDIT",
   "amount": 150.75,
@@ -73,6 +93,7 @@ GET /entries?date=2026-09-01
 
 ```json
 {
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
   "date": "2026-09-01",
   "items": [
     {
@@ -113,6 +134,7 @@ GET /daily-balances/2026-09-01
 
 ```json
 {
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
   "date": "2026-09-01",
   "totalCredits": 150.75,
   "totalDebits": 40.00,
@@ -132,6 +154,7 @@ Quando a consolidação ainda não tiver sido processada para a data solicitada,
 
 ```json
 {
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
   "date": "2026-09-01",
   "status": "PENDING",
   "message": "Saldo diário ainda não consolidado."
@@ -148,6 +171,7 @@ Quando a consolidação ainda não tiver sido processada para a data solicitada,
 
 ```json
 {
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
   "code": "VALIDATION_ERROR",
   "message": "A requisição possui campos inválidos.",
   "details": [
@@ -167,6 +191,7 @@ Quando a consolidação ainda não tiver sido processada para a data solicitada,
 
 ```json
 {
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
   "code": "RESOURCE_NOT_FOUND",
   "message": "Recurso não encontrado."
 }
@@ -180,6 +205,7 @@ Quando a consolidação ainda não tiver sido processada para a data solicitada,
 
 ```json
 {
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
   "code": "INTERNAL_ERROR",
   "message": "Erro interno ao processar a solicitação."
 }
@@ -194,6 +220,7 @@ Após a criação de um lançamento, a API de Lançamentos deve publicar um even
 ```json
 {
   "eventUid": "ad6afde9-9d36-4a79-b6c7-7314ad03b281",
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
   "eventType": "EntryCreated",
   "occurredAt": "2026-09-01T10:15:31Z",
   "data": {

@@ -48,13 +48,27 @@ Os logs devem permitir rastrear as principais operações da solução.
 
 | Operação | Informações Relevantes |
 | --- | --- |
-| Criação de lançamento | `entryUid`, tipo, valor, data de referência e momento da criação. |
-| Publicação de evento | `eventUid`, `entryUid`, tipo do evento e momento da publicação. |
-| Processamento de consolidação | `eventUid`, `entryUid`, data consolidada e resultado do processamento. |
-| Falha de consolidação | `eventUid`, `entryUid`, motivo da falha e tentativa de processamento. |
-| Consulta de saldo | data solicitada, status do saldo e momento da consulta. |
+| Criação de lançamento | `correlationId`, `entryUid`, tipo, valor, data de referência e momento da criação. |
+| Publicação de evento | `correlationId`, `eventUid`, `entryUid`, tipo do evento e momento da publicação. |
+| Processamento de consolidação | `correlationId`, `eventUid`, `entryUid`, data consolidada e resultado do processamento. |
+| Falha de consolidação | `correlationId`, `eventUid`, `entryUid`, motivo da falha e tentativa de processamento. |
+| Consulta de saldo | `correlationId`, data solicitada, status do saldo e momento da consulta. |
 
 Os logs não devem expor dados sensíveis desnecessários nem identificadores internos do banco.
+
+## Correlation ID
+
+O `correlationId` deve ser propagado entre os componentes para permitir rastreabilidade ponta a ponta.
+
+Quando uma requisição chegar sem `X-Correlation-Id`, a API deve gerar um novo valor. Quando o header for informado, a solução deve reaproveitar esse valor nos logs, respostas HTTP e eventos publicados.
+
+Exemplo de jornada rastreável:
+
+1. Consumidor envia `POST /entries` com `X-Correlation-Id`.
+2. API de Lançamentos registra o lançamento e grava logs com o mesmo `correlationId`.
+3. API publica o evento `EntryCreated` contendo o mesmo `correlationId`.
+4. Processador de Consolidação consome o evento e grava logs com o mesmo `correlationId`.
+5. Em caso de falha, o suporte consegue consultar logs relacionados à mesma jornada.
 
 ## Métricas
 
@@ -69,6 +83,7 @@ Métricas sugeridas para acompanhar a saúde da solução:
 | Tempo médio de consolidação | Medir atraso entre lançamento e saldo consolidado. |
 | Quantidade de falhas de consolidação | Identificar instabilidade no processamento. |
 | Quantidade de reprocessamentos | Avaliar necessidade de correção operacional. |
+| Requisições sem `correlationId` recebido | Avaliar maturidade dos consumidores e necessidade de geração interna. |
 
 ## Health Checks
 
