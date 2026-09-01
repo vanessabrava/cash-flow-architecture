@@ -2,6 +2,7 @@ using CashFlowArchitecture.Api.Common;
 using CashFlowArchitecture.Api.Contracts;
 using CashFlowArchitecture.Api.Contracts.Entries;
 using CashFlowArchitecture.Api.Domain.Entries;
+using CashFlowArchitecture.Api.Domain.Events;
 using CashFlowArchitecture.Api.Infrastructure;
 
 namespace CashFlowArchitecture.Api.Endpoints;
@@ -26,7 +27,8 @@ internal static class FinancialEntryEndpoints
     private static IResult Create(
         CreateFinancialEntryRequest request,
         HttpContext httpContext,
-        FileFinancialEntryStore store)
+        FileFinancialEntryStore store,
+        FileIntegrationEventStore eventStore)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
         var validationErrors = Validate(request);
@@ -49,6 +51,7 @@ internal static class FinancialEntryEndpoints
             DateTimeOffset.UtcNow);
 
         store.Add(entry);
+        eventStore.Add(EntryCreatedEvent.From(entry, correlationId));
 
         var response = new FinancialEntryResponse(
             correlationId,

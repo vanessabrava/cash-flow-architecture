@@ -109,7 +109,13 @@ Nesta implementação, os lançamentos são persistidos localmente em arquivo JS
 src/CashFlowArchitecture.Api/data/financial-entries.json
 ```
 
-A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A persistência em banco de dados pode ser adicionada em uma etapa futura.
+Ao criar um lançamento, a API também registra um evento local `EntryCreated`:
+
+```text
+src/CashFlowArchitecture.Api/data/integration-events.json
+```
+
+A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A persistência em banco de dados e a publicação em mensageria real podem ser adicionadas em uma etapa futura.
 
 ### Visual Studio Code
 
@@ -245,4 +251,4 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 
 1. Refinar requisitos funcionais e não funcionais.
 2. Evoluir persistência para PostgreSQL com EF Core quando necessário.
-3. Evoluir consolidação diária para processamento assíncrono.
+3. Criar processador de consolidação a partir dos eventos `EntryCreated`.

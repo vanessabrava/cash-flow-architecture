@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CashFlowArchitecture.Api.Domain.Entries;
+using CashFlowArchitecture.Api.Domain.Events;
 
 namespace CashFlowArchitecture.Api.Infrastructure;
 
-internal sealed class FileFinancialEntryStore
+internal sealed class FileIntegrationEventStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -16,37 +16,26 @@ internal sealed class FileFinancialEntryStore
     private readonly string filePath;
     private readonly Lock syncRoot = new();
 
-    public FileFinancialEntryStore(IHostEnvironment environment, IConfiguration configuration)
+    public FileIntegrationEventStore(IHostEnvironment environment, IConfiguration configuration)
     {
-        var configuredPath = configuration["Storage:FinancialEntriesPath"];
+        var configuredPath = configuration["Storage:IntegrationEventsPath"];
 
         filePath = string.IsNullOrWhiteSpace(configuredPath)
-            ? Path.Combine(environment.ContentRootPath, "data", "financial-entries.json")
+            ? Path.Combine(environment.ContentRootPath, "data", "integration-events.json")
             : GetFilePath(environment, configuredPath);
     }
 
-    public void Add(FinancialEntry entry)
+    public void Add(EntryCreatedEvent integrationEvent)
     {
         lock (syncRoot)
         {
-            var entries = ReadAll();
-            entries.Add(entry);
-            Save(entries);
+            var events = ReadAll();
+            events.Add(integrationEvent);
+            Save(events);
         }
     }
 
-    public IReadOnlyCollection<FinancialEntry> GetByDate(DateOnly entryDate)
-    {
-        lock (syncRoot)
-        {
-            return ReadAll()
-                .Where(entry => entry.EntryDate == entryDate)
-                .OrderBy(entry => entry.CreatedAt)
-                .ToArray();
-        }
-    }
-
-    private List<FinancialEntry> ReadAll()
+    private List<EntryCreatedEvent> ReadAll()
     {
         if (!File.Exists(filePath))
         {
@@ -55,10 +44,10 @@ internal sealed class FileFinancialEntryStore
 
         using var stream = File.OpenRead(filePath);
 
-        return JsonSerializer.Deserialize<List<FinancialEntry>>(stream, JsonOptions) ?? [];
+        return JsonSerializer.Deserialize<List<EntryCreatedEvent>>(stream, JsonOptions) ?? [];
     }
 
-    private void Save(IReadOnlyCollection<FinancialEntry> entries)
+    private void Save(IReadOnlyCollection<EntryCreatedEvent> events)
     {
         var directory = Path.GetDirectoryName(filePath);
 
@@ -68,7 +57,7 @@ internal sealed class FileFinancialEntryStore
         }
 
         using var stream = File.Create(filePath);
-        JsonSerializer.Serialize(stream, entries, JsonOptions);
+        JsonSerializer.Serialize(stream, events, JsonOptions);
     }
 
     private static string GetFilePath(IHostEnvironment environment, string configuredPath)

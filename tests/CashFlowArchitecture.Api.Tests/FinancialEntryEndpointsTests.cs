@@ -13,6 +13,9 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
     private readonly string entriesFilePath = Path.Combine(
         Path.GetTempPath(),
         $"cash-flow-entries-{Guid.NewGuid()}.json");
+    private readonly string integrationEventsFilePath = Path.Combine(
+        Path.GetTempPath(),
+        $"cash-flow-events-{Guid.NewGuid()}.json");
     private readonly HttpClient client;
 
     public FinancialEntryEndpointsTests()
@@ -24,7 +27,8 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
                 {
                     configuration.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        ["Storage:FinancialEntriesPath"] = entriesFilePath
+                        ["Storage:FinancialEntriesPath"] = entriesFilePath,
+                        ["Storage:IntegrationEventsPath"] = integrationEventsFilePath
                     });
                 });
             });
@@ -59,6 +63,37 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         Assert.Equal("Venda no cartao", body.RootElement.GetProperty("description").GetString());
         Assert.Equal("2026-09-01", body.RootElement.GetProperty("entryDate").GetString());
         Assert.False(body.RootElement.TryGetProperty("id", out _));
+    }
+
+    [Fact]
+    public async Task CreateEntry_PublishesEntryCreatedEventWithCorrelationId()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/entries")
+        {
+            Content = JsonContent.Create(new
+            {
+                type = "CREDIT",
+                amount = 150.75m,
+                description = "Venda no cartao",
+                entryDate = "2026-09-01"
+            })
+        };
+        request.Headers.Add("X-Correlation-Id", "event-correlation-123");
+
+        using var response = await client.SendAsync(request);
+        using var eventsFile = File.OpenRead(integrationEventsFilePath);
+        using var events = await JsonDocument.ParseAsync(eventsFile);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var integrationEvent = Assert.Single(events.RootElement.EnumerateArray());
+        Assert.True(Guid.TryParse(integrationEvent.GetProperty("eventUid").GetString(), out _));
+        Assert.Equal("event-correlation-123", integrationEvent.GetProperty("correlationId").GetString());
+        Assert.Equal("EntryCreated", integrationEvent.GetProperty("eventType").GetString());
+        Assert.True(Guid.TryParse(integrationEvent.GetProperty("data").GetProperty("entryUid").GetString(), out _));
+        Assert.Equal("CREDIT", integrationEvent.GetProperty("data").GetProperty("type").GetString());
+        Assert.Equal(150.75m, integrationEvent.GetProperty("data").GetProperty("amount").GetDecimal());
+        Assert.Equal("2026-09-01", integrationEvent.GetProperty("data").GetProperty("entryDate").GetString());
     }
 
     [Fact]
@@ -156,6 +191,11 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         if (File.Exists(entriesFilePath))
         {
             File.Delete(entriesFilePath);
+        }
+
+        if (File.Exists(integrationEventsFilePath))
+        {
+            File.Delete(integrationEventsFilePath);
         }
     }
 
