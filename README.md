@@ -4,8 +4,8 @@
 ![Coverage](https://img.shields.io/badge/coverage-enabled-brightgreen)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
 ![C%23](https://img.shields.io/badge/C%23-13-239120)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-planned-4169E1)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-planned-FF6600)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-4-FF6600)
 
 Este repositório documenta uma proposta de arquitetura de solução para uma plataforma de controle de fluxo de caixa, com foco em lançamentos financeiros e consolidação diária de saldo.
 
@@ -20,6 +20,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 ```text
 .
 ├── CashFlowArchitecture.slnx
+├── compose.yaml
 ├── README.md
 ├── docs
 │   ├── adr
@@ -67,6 +68,7 @@ A documentação do projeto será mantida em português. Quando houver código, 
 Para executar o projeto localmente, instale:
 
 - .NET SDK 10 ou superior.
+- Docker Desktop.
 - Visual Studio Code.
 - Extensão C# Dev Kit ou extensão C# compatível com depuração .NET.
 
@@ -94,6 +96,36 @@ Para executar os testes com coleta de cobertura:
 
 ```bash
 dotnet test CashFlowArchitecture.slnx --collect:"XPlat Code Coverage" --results-directory TestResults
+```
+
+### Infraestrutura Local
+
+O arquivo `compose.yaml` prepara os serviços planejados para a evolução da arquitetura:
+
+- PostgreSQL 17 para persistência relacional.
+- RabbitMQ 4 com painel de gerenciamento para mensageria.
+
+Para subir a infraestrutura local:
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+Serviços disponíveis:
+
+```text
+PostgreSQL: localhost:5432
+RabbitMQ: localhost:5672
+RabbitMQ Management: http://localhost:15672
+```
+
+As credenciais padrão ficam em `.env.example`. O arquivo `.env` local é ignorado pelo Git.
+
+Para parar os serviços:
+
+```bash
+docker compose down
 ```
 
 ## Pipeline
@@ -152,7 +184,7 @@ Ao processar os eventos, a API atualiza a visão local de saldo consolidado:
 src/CashFlowArchitecture.Api/data/daily-balances.json
 ```
 
-A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A persistência em banco de dados e a publicação em mensageria real podem ser adicionadas em uma etapa futura.
+A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A evolução planejada é substituir a persistência local por PostgreSQL com EF Core e substituir o arquivo de eventos por RabbitMQ.
 
 ### Visual Studio Code
 

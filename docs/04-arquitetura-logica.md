@@ -73,7 +73,16 @@ Esta visão lógica será refinada nas próximas etapas com:
 - Decisões arquiteturais formais.
 - Contratos de API.
 - Modelo de dados.
-- Estratégia de mensageria.
+- Estratégia de mensageria com RabbitMQ.
 - Estratégia de resiliência.
 - Estratégia de observabilidade.
 - Base inicial de implementação.
+
+## Tecnologias Planejadas
+
+| Componente | Tecnologia | Observação |
+| --- | --- | --- |
+| API | .NET com C# | Implementação dos contratos HTTP e regras de aplicação. |
+| Persistência | PostgreSQL | Banco relacional planejado para lançamentos e saldos consolidados. |
+| Mensageria | RabbitMQ | Canal planejado para eventos como `EntryCreated`. |
+| Execução local | Docker Compose | Facilita subir dependências de infraestrutura no ambiente de desenvolvimento. |
