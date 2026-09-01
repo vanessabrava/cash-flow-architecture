@@ -7,8 +7,10 @@ Este documento descreve uma proposta inicial de contratos HTTP para as capacidad
 - O formato de troca de dados será JSON.
 - Datas serão representadas no formato ISO 8601.
 - Valores monetários serão representados como número decimal.
-- Identificadores serão representados como texto.
+- Identificadores públicos serão representados como texto em formato UID/GUID.
 - Nomes de campos de API serão escritos em inglês.
+- O ID interno do banco de dados não será exposto nas APIs.
+- O ID interno será usado apenas para índices, chaves internas e relacionamentos na persistência.
 
 ## API de Lançamentos
 
@@ -48,7 +50,7 @@ POST /entries
 
 ```json
 {
-  "id": "entry-123",
+  "uid": "0f0b8b8d-5022-4b62-9e38-7b6f6a87f121",
   "type": "CREDIT",
   "amount": 150.75,
   "description": "Venda no cartão",
@@ -74,7 +76,7 @@ GET /entries?date=2026-09-01
   "date": "2026-09-01",
   "items": [
     {
-      "id": "entry-123",
+      "uid": "0f0b8b8d-5022-4b62-9e38-7b6f6a87f121",
       "type": "CREDIT",
       "amount": 150.75,
       "description": "Venda no cartão",
@@ -82,7 +84,7 @@ GET /entries?date=2026-09-01
       "createdAt": "2026-09-01T10:15:30Z"
     },
     {
-      "id": "entry-124",
+      "uid": "1b20c0d9-4a10-4ec9-8903-83a87d4c5f12",
       "type": "DEBIT",
       "amount": 40.00,
       "description": "Pagamento de fornecedor",
@@ -191,11 +193,11 @@ Após a criação de um lançamento, a API de Lançamentos deve publicar um even
 
 ```json
 {
-  "eventId": "event-789",
+  "eventUid": "ad6afde9-9d36-4a79-b6c7-7314ad03b281",
   "eventType": "EntryCreated",
   "occurredAt": "2026-09-01T10:15:31Z",
   "data": {
-    "entryId": "entry-123",
+    "entryUid": "0f0b8b8d-5022-4b62-9e38-7b6f6a87f121",
     "type": "CREDIT",
     "amount": 150.75,
     "entryDate": "2026-09-01"

@@ -31,7 +31,7 @@ Requisitos não funcionais descrevem qualidades, restrições e condições de o
 
 Um lançamento financeiro deve conter, no mínimo:
 
-- Identificador.
+- UID público do lançamento.
 - Tipo do lançamento: crédito ou débito.
 - Valor.
 - Data do lançamento.
