@@ -21,7 +21,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
     ├── 02-requisitos-iniciais.md
     ├── 03-premissas-restricoes-e-decisoes.md
     ├── 04-arquitetura-logica.md
-    └── 05-contratos-api.md
+    ├── 05-contratos-api.md
+    └── 06-modelo-de-dados.md
 ```
 
 ## Documentação
@@ -31,6 +32,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [Premissas, restrições e decisões](docs/03-premissas-restricoes-e-decisoes.md)
 - [Arquitetura lógica](docs/04-arquitetura-logica.md)
 - [Contratos de API](docs/05-contratos-api.md)
+- [Modelo de dados](docs/06-modelo-de-dados.md)
 - [ADR 0001 - Separar lançamentos e consolidação](docs/adr/0001-separar-lancamentos-e-consolidacao.md)
 - [ADR 0002 - Processar consolidação de forma assíncrona](docs/adr/0002-processar-consolidacao-de-forma-assincrona.md)
 
@@ -43,4 +45,5 @@ A documentação do projeto será mantida em português. Quando houver código, 
 As próximas entregas devem evoluir o repositório em partes pequenas e commitáveis, por exemplo:
 
 1. Refinar requisitos funcionais e não funcionais.
-2. Criar a base inicial de implementação.
+2. Definir estratégia de resiliência e observabilidade.
+3. Criar a base inicial de implementação.
