@@ -14,6 +14,8 @@ builder.Services.Configure<JsonOptions>(options =>
 });
 builder.Services.AddSingleton<FileFinancialEntryStore>();
 builder.Services.AddSingleton<FileIntegrationEventStore>();
+builder.Services.AddSingleton<FileDailyBalanceStore>();
+builder.Services.AddSingleton<DailyBalanceConsolidationProcessor>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {

@@ -1,5 +1,12 @@
 # Cash Flow Architecture
 
+[![Build and Test](https://github.com/vanessabrava/cash-flow-architecture/actions/workflows/ci.yml/badge.svg)](https://github.com/vanessabrava/cash-flow-architecture/actions/workflows/ci.yml)
+![Coverage](https://img.shields.io/badge/coverage-enabled-brightgreen)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
+![C%23](https://img.shields.io/badge/C%23-13-239120)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-planned-4169E1)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-planned-FF6600)
+
 Este repositório documenta uma proposta de arquitetura de solução para uma plataforma de controle de fluxo de caixa, com foco em lançamentos financeiros e consolidação diária de saldo.
 
 O objetivo é organizar a solução de forma progressiva, separando entendimento do problema, requisitos, decisões arquiteturais, desenho técnico e evolução da implementação.
@@ -83,6 +90,26 @@ Para executar os testes automatizados:
 dotnet test CashFlowArchitecture.slnx
 ```
 
+Para executar os testes com coleta de cobertura:
+
+```bash
+dotnet test CashFlowArchitecture.slnx --collect:"XPlat Code Coverage" --results-directory TestResults
+```
+
+## Pipeline
+
+O repositório possui um workflow do GitHub Actions em `.github/workflows/ci.yml`.
+
+O pipeline executa:
+
+1. Restore da solução.
+2. Build em configuração `Release`.
+3. Testes automatizados.
+4. Coleta de cobertura com `XPlat Code Coverage`.
+5. Upload dos resultados de teste como artefato do workflow.
+
+O badge `Build and Test` no topo do README mostra o status do workflow na branch `main`. O badge de cobertura indica que a coleta de cobertura está habilitada no pipeline; o relatório gerado fica disponível nos artefatos da execução.
+
 Endpoint inicial disponível:
 
 ```http
@@ -100,6 +127,7 @@ Endpoints de lançamentos disponíveis nesta etapa:
 ```http
 POST /entries
 GET /entries?date=2026-09-01
+POST /daily-balances/process-events
 GET /daily-balances/2026-09-01
 ```
 
@@ -113,6 +141,12 @@ Ao criar um lançamento, a API também registra um evento local `EntryCreated`:
 
 ```text
 src/CashFlowArchitecture.Api/data/integration-events.json
+```
+
+Ao processar os eventos, a API atualiza a visão local de saldo consolidado:
+
+```text
+src/CashFlowArchitecture.Api/data/daily-balances.json
 ```
 
 A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A persistência em banco de dados e a publicação em mensageria real podem ser adicionadas em uma etapa futura.
@@ -251,4 +285,4 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 
 1. Refinar requisitos funcionais e não funcionais.
 2. Evoluir persistência para PostgreSQL com EF Core quando necessário.
-3. Criar processador de consolidação a partir dos eventos `EntryCreated`.
+3. Evoluir o processamento local para worker assíncrono.

@@ -35,6 +35,16 @@ internal sealed class FileIntegrationEventStore
         }
     }
 
+    public IReadOnlyCollection<EntryCreatedEvent> GetAll()
+    {
+        lock (syncRoot)
+        {
+            return ReadAll()
+                .OrderBy(integrationEvent => integrationEvent.OccurredAt)
+                .ToArray();
+        }
+    }
+
     private List<EntryCreatedEvent> ReadAll()
     {
         if (!File.Exists(filePath))

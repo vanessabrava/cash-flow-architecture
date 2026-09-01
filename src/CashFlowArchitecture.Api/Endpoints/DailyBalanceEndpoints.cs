@@ -1,6 +1,5 @@
 using CashFlowArchitecture.Api.Common;
 using CashFlowArchitecture.Api.Contracts.DailyBalances;
-using CashFlowArchitecture.Api.Domain.Entries;
 using CashFlowArchitecture.Api.Infrastructure;
 
 namespace CashFlowArchitecture.Api.Endpoints;
@@ -14,30 +13,54 @@ internal static class DailyBalanceEndpoints
         balances.MapGet("/{date}", GetByDate)
             .WithName("GetDailyBalanceByDate")
             .WithSummary("Consulta o saldo diário.")
-            .WithDescription("Calcula o saldo diário a partir dos lançamentos financeiros registrados para a data informada.");
+            .WithDescription("Retorna o saldo diário consolidado para a data informada.");
+
+        balances.MapPost("/process-events", ProcessEvents)
+            .WithName("ProcessDailyBalanceEvents")
+            .WithSummary("Processa eventos de consolidação.")
+            .WithDescription("Processa eventos locais EntryCreated e atualiza a visão de saldo diário consolidado.");
     }
 
     private static IResult GetByDate(
         DateOnly date,
         HttpContext httpContext,
-        FileFinancialEntryStore store)
+        FileDailyBalanceStore store)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
-        var entries = store.GetByDate(date);
-        var totalCredits = entries
-            .Where(entry => entry.Type == EntryType.CREDIT)
-            .Sum(entry => entry.Amount);
-        var totalDebits = entries
-            .Where(entry => entry.Type == EntryType.DEBIT)
-            .Sum(entry => entry.Amount);
+        var balance = store.GetByDate(date);
+
+        if (balance is null)
+        {
+            return Results.Accepted(
+                $"/daily-balances/{date:yyyy-MM-dd}",
+                new PendingDailyBalanceResponse(
+                    correlationId,
+                    date,
+                    "PENDING",
+                    "Saldo diario ainda nao consolidado."));
+        }
 
         return Results.Ok(new DailyBalanceResponse(
             correlationId,
             date,
-            totalCredits,
-            totalDebits,
-            totalCredits - totalDebits,
-            "CONSOLIDATED",
-            DateTimeOffset.UtcNow));
+            balance.TotalCredits,
+            balance.TotalDebits,
+            balance.Balance,
+            balance.Status,
+            balance.UpdatedAt));
+    }
+
+    private static IResult ProcessEvents(
+        HttpContext httpContext,
+        DailyBalanceConsolidationProcessor processor)
+    {
+        var correlationId = CorrelationId.GetOrCreate(httpContext);
+        var result = processor.ProcessPendingEvents();
+
+        return Results.Ok(new ConsolidationProcessResponse(
+            correlationId,
+            result.ProcessedEvents,
+            result.SkippedEvents,
+            result.UpdatedBalances));
     }
 }

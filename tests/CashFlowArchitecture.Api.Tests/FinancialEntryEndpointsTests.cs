@@ -16,6 +16,9 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
     private readonly string integrationEventsFilePath = Path.Combine(
         Path.GetTempPath(),
         $"cash-flow-events-{Guid.NewGuid()}.json");
+    private readonly string dailyBalancesFilePath = Path.Combine(
+        Path.GetTempPath(),
+        $"cash-flow-balances-{Guid.NewGuid()}.json");
     private readonly HttpClient client;
 
     public FinancialEntryEndpointsTests()
@@ -28,7 +31,8 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
                     configuration.AddInMemoryCollection(new Dictionary<string, string?>
                     {
                         ["Storage:FinancialEntriesPath"] = entriesFilePath,
-                        ["Storage:IntegrationEventsPath"] = integrationEventsFilePath
+                        ["Storage:IntegrationEventsPath"] = integrationEventsFilePath,
+                        ["Storage:DailyBalancesPath"] = dailyBalancesFilePath
                     });
                 });
             });
@@ -145,8 +149,28 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         Assert.True(body.RootElement.TryGetProperty("paths", out var paths));
         Assert.True(paths.TryGetProperty("/entries", out _));
         Assert.True(paths.TryGetProperty("/daily-balances/{date}", out _));
+        Assert.True(paths.TryGetProperty("/daily-balances/process-events", out _));
 
         Assert.True(HasStringEntryTypeSchema(body.RootElement));
+    }
+
+    [Fact]
+    public async Task GetDailyBalanceByDate_ReturnsPendingWhenEventsWereNotProcessed()
+    {
+        await client.PostAsJsonAsync("/entries", new
+        {
+            type = "CREDIT",
+            amount = 150.75m,
+            description = "Venda no cartao",
+            entryDate = "2026-09-01"
+        });
+
+        using var response = await client.GetAsync("/daily-balances/2026-09-01");
+        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal("2026-09-01", body.RootElement.GetProperty("date").GetString());
+        Assert.Equal("PENDING", body.RootElement.GetProperty("status").GetString());
     }
 
     [Fact]
@@ -167,6 +191,18 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
             entryDate = "2026-09-01"
         });
 
+        using var processRequest = new HttpRequestMessage(HttpMethod.Post, "/daily-balances/process-events");
+        processRequest.Headers.Add("X-Correlation-Id", "process-correlation-123");
+
+        using var processResponse = await client.SendAsync(processRequest);
+        using var processBody = await JsonDocument.ParseAsync(await processResponse.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.OK, processResponse.StatusCode);
+        Assert.Equal("process-correlation-123", processBody.RootElement.GetProperty("correlationId").GetString());
+        Assert.Equal(2, processBody.RootElement.GetProperty("processedEvents").GetInt32());
+        Assert.Equal(0, processBody.RootElement.GetProperty("skippedEvents").GetInt32());
+        Assert.Equal(1, processBody.RootElement.GetProperty("updatedBalances").GetInt32());
+
         using var request = new HttpRequestMessage(HttpMethod.Get, "/daily-balances/2026-09-01");
         request.Headers.Add("X-Correlation-Id", "balance-correlation-123");
 
@@ -184,6 +220,30 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         Assert.False(body.RootElement.TryGetProperty("id", out _));
     }
 
+    [Fact]
+    public async Task ProcessEvents_IsIdempotent()
+    {
+        await client.PostAsJsonAsync("/entries", new
+        {
+            type = "CREDIT",
+            amount = 150.75m,
+            description = "Venda no cartao",
+            entryDate = "2026-09-01"
+        });
+
+        using var firstProcessResponse = await client.PostAsync("/daily-balances/process-events", null);
+        using var secondProcessResponse = await client.PostAsync("/daily-balances/process-events", null);
+        using var secondProcessBody = await JsonDocument.ParseAsync(await secondProcessResponse.Content.ReadAsStreamAsync());
+        using var balanceResponse = await client.GetAsync("/daily-balances/2026-09-01");
+        using var balanceBody = await JsonDocument.ParseAsync(await balanceResponse.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.OK, firstProcessResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondProcessResponse.StatusCode);
+        Assert.Equal(0, secondProcessBody.RootElement.GetProperty("processedEvents").GetInt32());
+        Assert.Equal(1, secondProcessBody.RootElement.GetProperty("skippedEvents").GetInt32());
+        Assert.Equal(150.75m, balanceBody.RootElement.GetProperty("balance").GetDecimal());
+    }
+
     public void Dispose()
     {
         client.Dispose();
@@ -196,6 +256,11 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         if (File.Exists(integrationEventsFilePath))
         {
             File.Delete(integrationEventsFilePath);
+        }
+
+        if (File.Exists(dailyBalancesFilePath))
+        {
+            File.Delete(dailyBalancesFilePath);
         }
     }
 

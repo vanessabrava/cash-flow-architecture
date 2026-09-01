@@ -120,6 +120,29 @@ GET /entries?date=2026-09-01
 
 Responsável por consultar o saldo diário consolidado.
 
+### Processar Eventos de Consolidação
+
+```http
+POST /daily-balances/process-events
+```
+
+#### Resposta de Sucesso
+
+```http
+200 OK
+```
+
+```json
+{
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
+  "processedEvents": 2,
+  "skippedEvents": 0,
+  "updatedBalances": 1
+}
+```
+
+Esse endpoint representa um processamento local simplificado dos eventos `EntryCreated`. Em uma evolução da arquitetura, esse processamento deve ser substituído por um worker assíncrono consumindo uma fila ou tópico de mensageria.
+
 ### Consultar Saldo Diário
 
 ```http
