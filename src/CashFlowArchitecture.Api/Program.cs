@@ -46,6 +46,7 @@ app.MapGet("/health", () => Results.Ok(new
 .WithDescription("Retorna o estado básico de disponibilidade da aplicação.");
 
 app.MapFinancialEntryEndpoints();
+app.MapDailyBalanceEndpoints();
 
 app.Run();
 

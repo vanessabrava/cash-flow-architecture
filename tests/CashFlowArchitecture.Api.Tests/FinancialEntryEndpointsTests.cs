@@ -109,8 +109,44 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(body.RootElement.TryGetProperty("paths", out var paths));
         Assert.True(paths.TryGetProperty("/entries", out _));
+        Assert.True(paths.TryGetProperty("/daily-balances/{date}", out _));
 
         Assert.True(HasStringEntryTypeSchema(body.RootElement));
+    }
+
+    [Fact]
+    public async Task GetDailyBalanceByDate_ReturnsConsolidatedBalance()
+    {
+        await client.PostAsJsonAsync("/entries", new
+        {
+            type = "CREDIT",
+            amount = 150.75m,
+            description = "Venda no cartao",
+            entryDate = "2026-09-01"
+        });
+        await client.PostAsJsonAsync("/entries", new
+        {
+            type = "DEBIT",
+            amount = 40.00m,
+            description = "Pagamento de fornecedor",
+            entryDate = "2026-09-01"
+        });
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/daily-balances/2026-09-01");
+        request.Headers.Add("X-Correlation-Id", "balance-correlation-123");
+
+        using var response = await client.SendAsync(request);
+        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("balance-correlation-123", response.Headers.GetValues("X-Correlation-Id").Single());
+        Assert.Equal("balance-correlation-123", body.RootElement.GetProperty("correlationId").GetString());
+        Assert.Equal("2026-09-01", body.RootElement.GetProperty("date").GetString());
+        Assert.Equal(150.75m, body.RootElement.GetProperty("totalCredits").GetDecimal());
+        Assert.Equal(40.00m, body.RootElement.GetProperty("totalDebits").GetDecimal());
+        Assert.Equal(110.75m, body.RootElement.GetProperty("balance").GetDecimal());
+        Assert.Equal("CONSOLIDATED", body.RootElement.GetProperty("status").GetString());
+        Assert.False(body.RootElement.TryGetProperty("id", out _));
     }
 
     public void Dispose()

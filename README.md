@@ -100,6 +100,7 @@ Endpoints de lançamentos disponíveis nesta etapa:
 ```http
 POST /entries
 GET /entries?date=2026-09-01
+GET /daily-balances/2026-09-01
 ```
 
 Nesta implementação, os lançamentos são persistidos localmente em arquivo JSON:
@@ -244,4 +245,4 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 
 1. Refinar requisitos funcionais e não funcionais.
 2. Evoluir persistência para PostgreSQL com EF Core quando necessário.
-3. Implementar consolidação diária.
+3. Evoluir consolidação diária para processamento assíncrono.
