@@ -103,6 +103,7 @@ dotnet test CashFlowArchitecture.slnx --collect:"XPlat Code Coverage" --results-
 O arquivo `compose.yaml` prepara os serviços planejados para a evolução da arquitetura:
 
 - PostgreSQL 17 para persistência relacional.
+- Adminer para consulta web do PostgreSQL local.
 - RabbitMQ 4 com painel de gerenciamento para mensageria.
 
 Para subir a infraestrutura local:
@@ -116,11 +117,45 @@ Serviços disponíveis:
 
 ```text
 PostgreSQL: localhost:5432
+Adminer: http://localhost:8080
 RabbitMQ: localhost:5672
 RabbitMQ Management: http://localhost:15672
 ```
 
 As credenciais padrão ficam em `.env.example`. O arquivo `.env` local é ignorado pelo Git.
+
+Essas credenciais são apenas para desenvolvimento local. Elas são descartáveis e não devem ser reutilizadas em ambientes de homologação, produção ou qualquer ambiente compartilhado.
+
+Credenciais locais padrão:
+
+| Serviço | Usuário | Senha |
+| --- | --- | --- |
+| PostgreSQL | `cash_flow_user` | `cash_flow_password` |
+| RabbitMQ Management | `cash_flow_user` | `cash_flow_password` |
+
+Para acessar o PostgreSQL pelo Adminer, abra `http://localhost:8080` e preencha os campos exatamente assim:
+
+| Campo no Adminer | Valor |
+| --- | --- |
+| System | `PostgreSQL` |
+| Server | `postgres` |
+| Username | `cash_flow_user` |
+| Password | `cash_flow_password` |
+| Database | `cash_flow` |
+
+O campo `System` precisa estar como `PostgreSQL`. Se ele ficar como `MySQL / MariaDB`, o Adminer tentará conectar usando o protocolo errado e exibirá erro como `Connection refused`.
+
+Connection string para a API executando fora do Docker, por exemplo via terminal ou F5 no VS Code:
+
+```text
+Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password
+```
+
+Connection string para um serviço executando dentro da mesma rede do Docker Compose:
+
+```text
+Host=postgres;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password
+```
 
 Para parar os serviços:
 
@@ -273,6 +308,7 @@ Arquivo `.vscode/launch.json`:
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:5099",
+        "ConnectionStrings__Postgres": "Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password",
         "DOTNET_ROOT": "/usr/local/share/dotnet",
         "PATH": "/usr/local/share/dotnet:/usr/local/bin:/opt/homebrew/bin:${env:PATH}"
       },

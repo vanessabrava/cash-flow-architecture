@@ -84,5 +84,6 @@ Esta visão lógica será refinada nas próximas etapas com:
 | --- | --- | --- |
 | API | .NET com C# | Implementação dos contratos HTTP e regras de aplicação. |
 | Persistência | PostgreSQL | Banco relacional planejado para lançamentos e saldos consolidados. |
+| Consulta local de dados | Adminer | Interface web local para inspecionar o PostgreSQL durante o desenvolvimento. |
 | Mensageria | RabbitMQ | Canal planejado para eventos como `EntryCreated`. |
 | Execução local | Docker Compose | Facilita subir dependências de infraestrutura no ambiente de desenvolvimento. |
