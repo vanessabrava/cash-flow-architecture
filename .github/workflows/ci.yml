@@ -36,8 +36,58 @@ jobs:
           dotnet test CashFlowArchitecture.slnx
           --configuration Release
           --no-build
+          --logger "trx;LogFileName=test-results.trx"
           --collect:"XPlat Code Coverage"
           --results-directory TestResults
+
+      - name: Publish test summary
+        if: always()
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+          trx_files = glob.glob("TestResults/**/*.trx", recursive=True)
+
+          with open(summary_path, "a", encoding="utf-8") as summary:
+              summary.write("## Test results\n\n")
+
+              if not trx_files:
+                  summary.write("No TRX test result files were found.\n")
+                  raise SystemExit(0)
+
+              total = passed = failed = skipped = 0
+              failed_tests = []
+
+              for trx_file in trx_files:
+                  root = ET.parse(trx_file).getroot()
+                  ns = {"trx": root.tag.split("}")[0].strip("{")}
+                  counters = root.find(".//trx:Counters", ns)
+
+                  if counters is not None:
+                      total += int(counters.attrib.get("total", 0))
+                      passed += int(counters.attrib.get("passed", 0))
+                      failed += int(counters.attrib.get("failed", 0))
+                      skipped += int(counters.attrib.get("notExecuted", 0))
+
+                  for result in root.findall(".//trx:UnitTestResult[@outcome='Failed']", ns):
+                      failed_tests.append(result.attrib.get("testName", "Unknown test"))
+
+              summary.write("| Total | Passed | Failed | Skipped |\n")
+              summary.write("| ---: | ---: | ---: | ---: |\n")
+              summary.write(f"| {total} | {passed} | {failed} | {skipped} |\n\n")
+
+              if failed_tests:
+                  summary.write("### Failed tests\n\n")
+                  for test in failed_tests:
+                      summary.write(f"- `{test}`\n")
+                  summary.write("\n")
+
+              summary.write("Coverage files are available in the workflow artifact `test-results`.\n")
+          PY
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

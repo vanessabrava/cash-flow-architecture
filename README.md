@@ -106,9 +106,12 @@ O pipeline executa:
 2. Build em configuração `Release`.
 3. Testes automatizados.
 4. Coleta de cobertura com `XPlat Code Coverage`.
-5. Upload dos resultados de teste como artefato do workflow.
+5. Publicação de resumo visual dos testes no próprio GitHub Actions.
+6. Upload dos resultados de teste como artefato do workflow.
 
 O badge `Build and Test` no topo do README mostra o status do workflow na branch `main`. O badge de cobertura indica que a coleta de cobertura está habilitada no pipeline; o relatório gerado fica disponível nos artefatos da execução.
+
+O resumo dos testes aparece na página da execução do workflow, sem precisar baixar o artefato apenas para ver quantos testes passaram ou falharam.
 
 Endpoint inicial disponível:
 
