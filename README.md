@@ -96,7 +96,13 @@ POST /entries
 GET /entries?date=2026-09-01
 ```
 
-Nesta primeira implementação, os lançamentos são mantidos em memória. A persistência em banco de dados será adicionada em uma etapa futura.
+Nesta implementação, os lançamentos são persistidos localmente em arquivo JSON:
+
+```text
+src/CashFlowArchitecture.Api/data/financial-entries.json
+```
+
+A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A persistência em banco de dados pode ser adicionada em uma etapa futura.
 
 ### Visual Studio Code
 
@@ -218,5 +224,5 @@ Isso faz o VS Code herdar o mesmo PATH do terminal. Outra alternativa é criar u
 As próximas entregas devem evoluir o repositório em partes pequenas e commitáveis, por exemplo:
 
 1. Refinar requisitos funcionais e não funcionais.
-2. Implementar persistência dos lançamentos financeiros.
-3. Adicionar Swagger para documentação navegável da API.
+2. Adicionar Swagger para documentação navegável da API.
+3. Evoluir persistência para banco de dados quando necessário.

@@ -9,7 +9,7 @@ builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
-builder.Services.AddSingleton<InMemoryFinancialEntryStore>();
+builder.Services.AddSingleton<FileFinancialEntryStore>();
 
 var app = builder.Build();
 

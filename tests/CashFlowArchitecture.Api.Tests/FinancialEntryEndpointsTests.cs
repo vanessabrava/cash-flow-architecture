@@ -1,17 +1,34 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace CashFlowArchitecture.Api.Tests;
 
-public sealed class FinancialEntryEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class FinancialEntryEndpointsTests : IDisposable
 {
+    private readonly string entriesFilePath = Path.Combine(
+        Path.GetTempPath(),
+        $"cash-flow-entries-{Guid.NewGuid()}.json");
     private readonly HttpClient client;
 
-    public FinancialEntryEndpointsTests(WebApplicationFactory<Program> factory)
+    public FinancialEntryEndpointsTests()
     {
+        var factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureAppConfiguration((_, configuration) =>
+                {
+                    configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["Storage:FinancialEntriesPath"] = entriesFilePath
+                    });
+                });
+            });
+
         client = factory.CreateClient();
     }
 
@@ -81,5 +98,15 @@ public sealed class FinancialEntryEndpointsTests : IClassFixture<WebApplicationF
         Assert.Contains(
             body.RootElement.GetProperty("details").EnumerateArray(),
             detail => detail.GetProperty("field").GetString() == "amount");
+    }
+
+    public void Dispose()
+    {
+        client.Dispose();
+
+        if (File.Exists(entriesFilePath))
+        {
+            File.Delete(entriesFilePath);
+        }
     }
 }
