@@ -1,0 +1,11 @@
+bin/
+obj/
+.vs/
+
+# Configurações locais do editor
+.vscode/
+
+*.user
+*.suo
+TestResults/
+coverage/

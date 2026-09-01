@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj" />
+  </Folder>
+</Solution>
