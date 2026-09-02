@@ -68,6 +68,8 @@ As respostas públicas devem retornar `uid`, `entryUid` ou `eventUid` quando nec
 
 Também deve ser validado que as respostas retornam `correlationId` e que a API respeita o valor recebido no header `X-Correlation-Id`.
 
+Os testes automatizados devem preservar o contrato de propagação do `X-Correlation-Id` em respostas de sucesso, erro e endpoints operacionais.
+
 ## Testes de Integração
 
 Testes de integração devem validar a comunicação entre componentes.

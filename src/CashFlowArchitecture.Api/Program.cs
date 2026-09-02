@@ -7,6 +7,7 @@ using CashFlowArchitecture.Infrastructure.Messaging;
 using CashFlowArchitecture.Infrastructure.Persistence;
 using CashFlowArchitecture.Infrastructure.Storage;
 using CashFlowArchitecture.Api.Security;
+using CashFlowArchitecture.Api.Observability;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
@@ -87,9 +88,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+app.UseSwaggerUI();
 }
 
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
 
 app.MapHealthEndpoints();

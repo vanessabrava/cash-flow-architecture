@@ -33,7 +33,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   │   ├── 0006-usar-redis-para-cache-de-saldo-diario.md
 │   │   ├── 0007-usar-outbox-para-publicacao-confiavel-de-eventos.md
 │   │   ├── 0008-controlar-retentativas-da-outbox.md
-│   │   └── 0009-separar-liveness-e-readiness.md
+│   │   ├── 0009-separar-liveness-e-readiness.md
+│   │   └── 0010-registrar-logs-http-estruturados.md
 │   ├── 01-contexto-e-objetivo.md
 │   ├── 02-requisitos-iniciais.md
 │   ├── 03-premissas-restricoes-e-decisoes.md
@@ -79,6 +80,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [ADR 0007 - Usar Outbox para publicação confiável de eventos](docs/adr/0007-usar-outbox-para-publicacao-confiavel-de-eventos.md)
 - [ADR 0008 - Controlar retentativas da Outbox](docs/adr/0008-controlar-retentativas-da-outbox.md)
 - [ADR 0009 - Separar liveness e readiness](docs/adr/0009-separar-liveness-e-readiness.md)
+- [ADR 0010 - Registrar logs HTTP estruturados](docs/adr/0010-registrar-logs-http-estruturados.md)
 
 ## Idioma do Projeto
 
@@ -373,6 +375,8 @@ O endpoint `GET /health/ready` indica se a API está pronta para operar:
 - RabbitMQ é dependência não crítica, porque a Outbox permite publicar eventos depois.
 
 Se uma dependência crítica falhar, o readiness retorna `503 Service Unavailable`. Se apenas dependências não críticas falharem, retorna `200 OK` com status `Degraded`.
+
+A API registra logs HTTP estruturados com método, rota, status code, duração e `correlationId`. Os logs não devem registrar payloads, senhas ou API Keys.
 
 Documentação navegável da API em ambiente de desenvolvimento:
 
@@ -690,4 +694,4 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 3. Evoluir a Outbox para backoff exponencial, fila de erro dedicada e reprocessamento administrativo.
 4. Evoluir retry e observabilidade da atualização de cache após consolidação.
 5. Criar testes de integração com PostgreSQL, RabbitMQ e Redis em containers.
-6. Detalhar observabilidade com logs estruturados, métricas, tracing e dashboards.
+6. Detalhar observabilidade com logs JSON, métricas, tracing e dashboards.

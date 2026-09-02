@@ -82,8 +82,13 @@ O TTL inicial é de 15 minutos. Ele existe para limitar o risco de cache antigo 
 
 Os logs devem permitir rastrear as principais operações da solução.
 
+A API possui um middleware de logs HTTP estruturados. Ele obtém ou gera o `correlationId` no início da requisição, grava esse valor no header de resposta `X-Correlation-Id`, usa o mesmo valor no `TraceIdentifier` e registra método HTTP, rota, status code e duração.
+
+Payloads, senhas, API Keys e dados sensíveis não devem ser registrados.
+
 | Operação | Informações Relevantes |
 | --- | --- |
+| Requisição HTTP | `correlationId`, método, rota, status code e duração. |
 | Criação de lançamento | `correlationId`, `entryUid`, tipo, valor, data de referência e momento da criação. |
 | Reutilização de chave de idempotência | `correlationId`, `idempotencyKey`, operação, `entryUid` retornado e resultado da reutilização. |
 | Publicação de evento | `correlationId`, `eventUid`, `entryUid`, tipo do evento e momento da publicação. |
@@ -191,7 +196,7 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 - Evoluir a política da Outbox para backoff exponencial, jitter e reprocessamento administrativo.
 - Definir estratégia de fila de erro dedicada.
 - Definir limites aceitáveis de atraso na consolidação.
-- Definir formato final dos logs estruturados.
+- Evoluir logs para formato JSON padronizado.
 - Definir dashboards e alertas operacionais.
 - Criar health checks específicos para o worker de consolidação.
 

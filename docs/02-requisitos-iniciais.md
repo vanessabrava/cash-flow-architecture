@@ -30,6 +30,7 @@ Requisitos não funcionais descrevem qualidades, restrições e condições de o
 | RNF-007 | A solução deve evitar duplicidade causada por retry na criação de lançamentos. |
 | RNF-008 | A solução deve reduzir o risco de perda de evento entre a gravação do lançamento e a publicação para consolidação. |
 | RNF-009 | A API deve expor verificações de liveness e readiness para apoiar operação em containers. |
+| RNF-010 | A API deve registrar logs estruturados com `correlationId`, rota, status e duração das requisições. |
 
 ## Dados Iniciais de Um Lançamento
 
