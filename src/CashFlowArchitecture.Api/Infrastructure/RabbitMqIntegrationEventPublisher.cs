@@ -16,7 +16,7 @@ internal sealed class RabbitMqIntegrationEventPublisher(IConfiguration configura
 
     public async Task PublishAsync(EntryCreatedEvent integrationEvent, CancellationToken cancellationToken)
     {
-        var options = GetOptions();
+        var options = RabbitMqOptions.From(configuration);
         var factory = new ConnectionFactory
         {
             HostName = options.HostName,
@@ -66,27 +66,4 @@ internal sealed class RabbitMqIntegrationEventPublisher(IConfiguration configura
             body: body,
             cancellationToken: cancellationToken);
     }
-
-    private RabbitMqOptions GetOptions()
-    {
-        return new RabbitMqOptions(
-            configuration["RabbitMq:HostName"] ?? "localhost",
-            configuration.GetValue("RabbitMq:Port", 5672),
-            configuration["RabbitMq:UserName"] ?? "cash_flow_user",
-            configuration["RabbitMq:Password"] ?? "cash_flow_password",
-            configuration["RabbitMq:VirtualHost"] ?? "/",
-            configuration["RabbitMq:Exchange"] ?? "cash-flow.events",
-            configuration["RabbitMq:Queue"] ?? "cash-flow.entry-created",
-            configuration["RabbitMq:RoutingKey"] ?? "entry.created");
-    }
-
-    private sealed record RabbitMqOptions(
-        string HostName,
-        int Port,
-        string UserName,
-        string Password,
-        string VirtualHost,
-        string Exchange,
-        string Queue,
-        string RoutingKey);
 }

@@ -134,7 +134,7 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 
 ## Pontos Para Evolução
 
-- Implementar worker assíncrono de consolidação consumindo RabbitMQ.
+- Separar o worker em um projeto .NET próprio dentro da solution.
 - Evoluir a publicação para padrão Outbox antes de produção.
 - Definir política de retentativas.
 - Definir estratégia de fila de erro.

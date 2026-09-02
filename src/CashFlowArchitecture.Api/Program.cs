@@ -37,6 +37,11 @@ else
 }
 
 builder.Services.AddScoped<DailyBalanceConsolidationProcessor>();
+if (builder.Configuration.GetValue("ConsolidationWorker:Enabled", false))
+{
+    builder.Services.AddHostedService<RabbitMqDailyBalanceWorker>();
+}
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {

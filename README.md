@@ -109,6 +109,7 @@ O arquivo `compose.yaml` prepara a aplicação e os serviços planejados para a 
 - Adminer para consulta web do PostgreSQL local.
 - RabbitMQ 4 com painel de gerenciamento para mensageria.
 - Serviço temporário de migrations para criar ou atualizar o schema do PostgreSQL.
+- Worker de consolidação para consumir eventos do RabbitMQ e atualizar o saldo diário.
 
 #### Opção 1: executar infraestrutura no Docker e API pelo terminal ou F5
 
@@ -187,11 +188,13 @@ Esse comando executa o fluxo completo:
 7. Sobe o RabbitMQ.
 8. Sobe o Adminer.
 9. Sobe a API em container.
+10. Sobe o worker de consolidação em container separado.
 
 O Docker Compose pode iniciar alguns serviços independentes em paralelo. As dependências importantes ficam controladas no compose:
 
 1. O serviço `migrations` só executa depois que o PostgreSQL está saudável.
 2. A API só sobe depois que o PostgreSQL está saudável, o RabbitMQ está saudável e o serviço `migrations` terminou com sucesso.
+3. O worker só sobe depois que o PostgreSQL está saudável, o RabbitMQ está saudável e o serviço `migrations` terminou com sucesso.
 
 O container `cash-flow-migrations` termina após aplicar as migrations. Isso é esperado. Ele não é uma aplicação contínua.
 
@@ -201,7 +204,7 @@ Passo 3: validar se os serviços subiram.
 docker compose ps
 ```
 
-O PostgreSQL e o RabbitMQ devem aparecer como saudáveis. A API deve aparecer em execução.
+O PostgreSQL e o RabbitMQ devem aparecer como saudáveis. A API e o worker de consolidação devem aparecer em execução.
 
 Passo 4: acessar a aplicação e as ferramentas locais.
 
@@ -335,7 +338,7 @@ src/CashFlowArchitecture.Api/data/integration-events.json
 
 A pasta `data/` é ignorada pelo Git porque contém dados locais de execução.
 
-Esse arquivo local existe apenas para manter o endpoint manual de consolidação funcionando enquanto o worker assíncrono ainda não foi separado em outro serviço.
+Esse arquivo local existe apenas para manter o endpoint manual de consolidação funcionando durante a evolução do desafio.
 
 Após cadastrar um lançamento, a fila `cash-flow.entry-created` deve aparecer no RabbitMQ Management.
 
@@ -347,9 +350,32 @@ Para validar no painel:
 4. Abra a fila `cash-flow.entry-created`.
 5. Verifique se o contador de publicações aumentou após chamar `POST /entries`.
 
-Como ainda não existe consumer nessa etapa, as mensagens ficam disponíveis para consumo pelo futuro worker de consolidação.
+O worker `cash-flow-consolidation-worker` consome essa fila e atualiza o saldo consolidado no PostgreSQL.
 
-Enquanto o worker assíncrono não for implementado, a consolidação ainda é disparada manualmente pelo endpoint:
+Para validar a independência entre API e consolidação:
+
+1. Pare apenas o worker:
+
+```bash
+docker stop cash-flow-consolidation-worker
+```
+
+2. Cadastre um lançamento pelo Swagger.
+3. Consulte o saldo da data cadastrada.
+
+Enquanto o worker estiver parado, a API continua registrando lançamentos, mas o saldo pode retornar `PENDING`.
+
+4. Ligue novamente o worker:
+
+```bash
+docker compose up -d consolidation-worker
+```
+
+5. Consulte o saldo novamente.
+
+Depois que o worker consumir a mensagem pendente, o saldo deve retornar `CONSOLIDATED`.
+
+O endpoint abaixo permanece disponível como apoio temporário para processamento manual durante o desenvolvimento:
 
 ```http
 POST /daily-balances/process-events
@@ -490,4 +516,4 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 
 1. Refinar requisitos funcionais e não funcionais.
 2. Evoluir persistência para PostgreSQL com EF Core quando necessário.
-3. Evoluir o processamento local para worker assíncrono consumindo RabbitMQ.
+3. Separar o worker em um projeto .NET próprio dentro da solution.

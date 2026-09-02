@@ -86,5 +86,6 @@ Esta visão lógica será refinada nas próximas etapas com:
 | Persistência | PostgreSQL | Banco relacional planejado para lançamentos e saldos consolidados. |
 | Consulta local de dados | Adminer | Interface web local para inspecionar o PostgreSQL durante o desenvolvimento. |
 | Mensageria | RabbitMQ | Canal de publicação de eventos como `EntryCreated`. |
+| Worker de consolidação | .NET BackgroundService | Consome eventos do RabbitMQ e atualiza o saldo diário consolidado. |
 | Migrations | EF Core Migrations | Criação e evolução controlada do schema do PostgreSQL. |
 | Execução local | Docker Compose | Facilita subir a API e suas dependências no ambiente de desenvolvimento. |

@@ -191,9 +191,9 @@ POST /daily-balances/process-events
 }
 ```
 
-Esse endpoint representa um processamento local simplificado dos eventos `EntryCreated`. Em uma evolução da arquitetura, esse processamento deve ser substituído por um worker assíncrono consumindo RabbitMQ.
+Esse endpoint representa um processamento local simplificado dos eventos `EntryCreated`. Ele permanece disponível como apoio temporário para desenvolvimento e diagnóstico.
 
-Na implementação atual, a API já publica o evento no RabbitMQ e também mantém uma cópia local temporária em arquivo JSON. Essa cópia existe apenas para permitir o processamento manual enquanto o worker separado ainda não foi implementado.
+Na implementação atual, a consolidação assíncrona principal é executada pelo worker `cash-flow-consolidation-worker`, que consome eventos do RabbitMQ. A API também mantém uma cópia local temporária em arquivo JSON para permitir o processamento manual durante a evolução do desafio.
 
 ### Consultar Saldo Diário
 
@@ -298,7 +298,7 @@ Na implementação atual, esse evento é publicado no RabbitMQ com a seguinte co
 | Queue | `cash-flow.entry-created` |
 | Routing key | `entry.created` |
 
-A API também registra uma cópia local temporária do evento em arquivo JSON para manter o endpoint manual de processamento disponível até a criação do worker assíncrono.
+A API também registra uma cópia local temporária do evento em arquivo JSON para manter o endpoint manual de processamento disponível durante o desenvolvimento.
 
 ### Evento: EntryCreated
 
