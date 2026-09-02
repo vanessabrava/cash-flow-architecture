@@ -32,7 +32,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   │   ├── 0005-usar-api-key-local-para-protecao-inicial.md
 │   │   ├── 0006-usar-redis-para-cache-de-saldo-diario.md
 │   │   ├── 0007-usar-outbox-para-publicacao-confiavel-de-eventos.md
-│   │   └── 0008-controlar-retentativas-da-outbox.md
+│   │   ├── 0008-controlar-retentativas-da-outbox.md
+│   │   └── 0009-separar-liveness-e-readiness.md
 │   ├── 01-contexto-e-objetivo.md
 │   ├── 02-requisitos-iniciais.md
 │   ├── 03-premissas-restricoes-e-decisoes.md
@@ -77,6 +78,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [ADR 0006 - Usar Redis para cache de saldo diário](docs/adr/0006-usar-redis-para-cache-de-saldo-diario.md)
 - [ADR 0007 - Usar Outbox para publicação confiável de eventos](docs/adr/0007-usar-outbox-para-publicacao-confiavel-de-eventos.md)
 - [ADR 0008 - Controlar retentativas da Outbox](docs/adr/0008-controlar-retentativas-da-outbox.md)
+- [ADR 0009 - Separar liveness e readiness](docs/adr/0009-separar-liveness-e-readiness.md)
 
 ## Idioma do Projeto
 
@@ -352,13 +354,25 @@ O badge `Build and Test` no topo do README mostra o status do workflow na branch
 
 O resumo dos testes aparece na página da execução do workflow, sem precisar baixar o artefato apenas para ver quantos testes passaram ou falharam.
 
-Endpoint inicial disponível:
+Endpoints operacionais disponíveis:
 
 ```http
 GET /health
+GET /health/live
+GET /health/ready
 ```
 
-O endpoint de saúde é público para facilitar verificação de disponibilidade local.
+Os endpoints de saúde são públicos para facilitar verificação de disponibilidade local.
+
+O endpoint `GET /health/live` indica se o processo da API está vivo.
+
+O endpoint `GET /health/ready` indica se a API está pronta para operar:
+
+- PostgreSQL é dependência crítica, porque a API precisa dele para gravar lançamentos.
+- Redis é dependência não crítica, porque a API consegue consultar PostgreSQL se o cache falhar.
+- RabbitMQ é dependência não crítica, porque a Outbox permite publicar eventos depois.
+
+Se uma dependência crítica falhar, o readiness retorna `503 Service Unavailable`. Se apenas dependências não críticas falharem, retorna `200 OK` com status `Degraded`.
 
 Documentação navegável da API em ambiente de desenvolvimento:
 
@@ -647,6 +661,8 @@ Para validar a saúde da API:
 
 ```http
 GET http://localhost:5099/health
+GET http://localhost:5099/health/live
+GET http://localhost:5099/health/ready
 ```
 
 Para validar um endpoint protegido, informe o header `X-Api-Key`:
@@ -674,4 +690,4 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 3. Evoluir a Outbox para backoff exponencial, fila de erro dedicada e reprocessamento administrativo.
 4. Evoluir retry e observabilidade da atualização de cache após consolidação.
 5. Criar testes de integração com PostgreSQL, RabbitMQ e Redis em containers.
-6. Detalhar observabilidade com logs estruturados, métricas, tracing e health checks de dependências.
+6. Detalhar observabilidade com logs estruturados, métricas, tracing e dashboards.

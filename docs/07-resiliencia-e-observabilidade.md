@@ -139,9 +139,19 @@ Cada componente deve expor verificações básicas de saúde.
 
 | Componente | Verificações |
 | --- | --- |
-| API de Lançamentos | Aplicação disponível e conexão com a base de lançamentos. |
-| API de Consulta de Saldo | Aplicação disponível e conexão com a base de saldos consolidados. |
+| API de Lançamentos | Liveness da aplicação e readiness com PostgreSQL como dependência crítica. |
+| API de Consulta de Saldo | Liveness da aplicação e readiness com PostgreSQL como dependência crítica. Redis deve aparecer como dependência não crítica. |
 | Processador de Consolidação | Aplicação disponível, conexão com canal de eventos e conexão com base de saldos. |
+
+Endpoints da API:
+
+| Endpoint | Objetivo |
+| --- | --- |
+| `GET /health` | Verificação básica e compatibilidade com validações locais. |
+| `GET /health/live` | Indicar se o processo da API está vivo. |
+| `GET /health/ready` | Indicar se a API está pronta para operar com dependências críticas. |
+
+No readiness da API, RabbitMQ é reportado como dependência não crítica porque a publicação de eventos é protegida pela Outbox. Redis também é reportado como dependência não crítica porque a API possui fallback para PostgreSQL.
 
 ## Alertas
 
@@ -154,6 +164,8 @@ Alertas devem ser considerados para situações que afetam a operação:
 - mensagens da Outbox com `failedAt` preenchido;
 - atraso elevado entre criação do lançamento e consolidação;
 - erro recorrente ao persistir saldo consolidado;
+- readiness da API retornando `Unhealthy`;
+- readiness da API retornando `Degraded` por tempo prolongado;
 - indisponibilidade da API de Lançamentos;
 - aumento anormal de respostas `401 Unauthorized`;
 - aumento de falhas de leitura ou escrita no Redis;
@@ -181,6 +193,7 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 - Definir limites aceitáveis de atraso na consolidação.
 - Definir formato final dos logs estruturados.
 - Definir dashboards e alertas operacionais.
+- Criar health checks específicos para o worker de consolidação.
 
 ## Ferramentas Locais de Diagnóstico
 

@@ -55,8 +55,42 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         using var unauthenticatedClient = factory.CreateClient();
 
         using var response = await unauthenticatedClient.GetAsync("/health");
+        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Healthy", body.RootElement.GetProperty("status").GetString());
+        Assert.Equal("cash-flow-api", body.RootElement.GetProperty("service").GetString());
+        Assert.True(response.Headers.Contains("X-Correlation-Id"));
+    }
+
+    [Fact]
+    public async Task Liveness_ReturnsOkWithoutApiKey()
+    {
+        using var unauthenticatedClient = factory.CreateClient();
+
+        using var response = await unauthenticatedClient.GetAsync("/health/live");
+        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Healthy", body.RootElement.GetProperty("status").GetString());
+        Assert.Empty(body.RootElement.GetProperty("dependencies").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Readiness_ReturnsLocalStorageDependencyWhenUsingFileStorage()
+    {
+        using var unauthenticatedClient = factory.CreateClient();
+
+        using var response = await unauthenticatedClient.GetAsync("/health/ready");
+        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Healthy", body.RootElement.GetProperty("status").GetString());
+
+        var dependency = Assert.Single(body.RootElement.GetProperty("dependencies").EnumerateArray());
+        Assert.Equal("local-storage", dependency.GetProperty("name").GetString());
+        Assert.Equal("Healthy", dependency.GetProperty("status").GetString());
+        Assert.True(dependency.GetProperty("critical").GetBoolean());
     }
 
     [Fact]
@@ -256,6 +290,9 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(body.RootElement.TryGetProperty("paths", out var paths));
+        Assert.True(paths.TryGetProperty("/health", out _));
+        Assert.True(paths.TryGetProperty("/health/live", out _));
+        Assert.True(paths.TryGetProperty("/health/ready", out _));
         Assert.True(paths.TryGetProperty("/entries", out _));
         Assert.True(paths.TryGetProperty("/daily-balances/{date}", out _));
         Assert.True(paths.TryGetProperty("/daily-balances/process-events", out _));

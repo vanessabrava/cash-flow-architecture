@@ -42,6 +42,7 @@ As decisões abaixo consolidam escolhas já registradas ou implementadas no repo
 | DA-008 | Usar Redis como cache de leitura do saldo diário consolidado. | Essa decisão reduz leituras repetidas no PostgreSQL sem mudar a fonte da verdade da solução. |
 | DA-009 | Usar Outbox para publicação confiável de eventos. | Essa decisão reduz o risco de lançamento salvo sem evento publicado no RabbitMQ. |
 | DA-010 | Controlar retentativas da Outbox com limite e estado de falha. | Essa decisão evita retry sem controle e facilita diagnóstico operacional. |
+| DA-011 | Separar liveness e readiness da API. | Essa decisão diferencia processo vivo de aplicação pronta para operar com dependências críticas. |
 
 ## Pontos em Aberto
 
@@ -51,7 +52,7 @@ Os pontos abaixo permanecem como evolução planejada:
 - Estratégia de autorização por escopo, perfil ou recurso.
 - Backoff exponencial, fila de erro dedicada e reprocessamento administrativo para mensagens da Outbox e do RabbitMQ.
 - Estratégia de retry e observabilidade para falhas de atualização do cache.
-- Estratégia de observabilidade completa.
+- Estratégia de observabilidade completa com métricas, tracing e dashboards.
 - Testes de integração com dependências reais em containers.
 - Testes de carga para endpoints críticos.
 

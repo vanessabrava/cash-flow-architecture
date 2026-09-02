@@ -92,16 +92,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 
 app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
 
-app.MapGet("/health", () => Results.Ok(new
-{
-    status = "Healthy",
-    service = "cash-flow-api",
-    checkedAt = DateTimeOffset.UtcNow
-}))
-.WithName("GetHealth")
-.WithSummary("Consulta a saúde da API.")
-.WithDescription("Retorna o estado básico de disponibilidade da aplicação.");
-
+app.MapHealthEndpoints();
 app.MapFinancialEntryEndpoints();
 app.MapDailyBalanceEndpoints();
 

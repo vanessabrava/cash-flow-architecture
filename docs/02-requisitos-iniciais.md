@@ -29,6 +29,7 @@ Requisitos não funcionais descrevem qualidades, restrições e condições de o
 | RNF-006 | A API e o worker devem poder executar em containers separados. |
 | RNF-007 | A solução deve evitar duplicidade causada por retry na criação de lançamentos. |
 | RNF-008 | A solução deve reduzir o risco de perda de evento entre a gravação do lançamento e a publicação para consolidação. |
+| RNF-009 | A API deve expor verificações de liveness e readiness para apoiar operação em containers. |
 
 ## Dados Iniciais de Um Lançamento
 

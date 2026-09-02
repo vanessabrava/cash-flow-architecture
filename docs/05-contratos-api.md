@@ -37,6 +37,8 @@ Em uma evolução real da solução, a autenticação e autorização devem avan
 | Endpoint | Motivo |
 | --- | --- |
 | `GET /health` | Permite verificar disponibilidade básica da aplicação. |
+| `GET /health/live` | Permite verificar se o processo da API está vivo. |
+| `GET /health/ready` | Permite verificar se a API está pronta para operar com dependências críticas. |
 | `/swagger` | Permite testar a API em ambiente de desenvolvimento. |
 
 ### Endpoints Protegidos

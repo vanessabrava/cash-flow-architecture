@@ -61,6 +61,8 @@ Testes de API devem validar contratos HTTP, payloads e códigos de resposta.
 | `GET /daily-balances/{date}` | Retornar `202 Accepted` quando o saldo ainda estiver pendente. |
 | `GET /daily-balances/{date}` | Reutilizar cache quando o saldo consolidado já tiver sido consultado. |
 | `GET /health` | Retornar `200 OK` sem exigir API Key. |
+| `GET /health/live` | Retornar `200 OK` sem exigir API Key. |
+| `GET /health/ready` | Retornar dependências avaliadas e `503 Service Unavailable` quando uma dependência crítica falhar. |
 
 As respostas públicas devem retornar `uid`, `entryUid` ou `eventUid` quando necessário. O campo `id` interno não deve aparecer em respostas públicas.
 
@@ -81,6 +83,7 @@ Testes de integração devem validar a comunicação entre componentes.
 | Processador de Consolidação e base de saldos | Persistir totais de crédito, débito e saldo final. |
 | API de Consulta de Saldo e Redis | Armazenar e recuperar saldo consolidado em cache. |
 | Processador de Consolidação e Redis | Atualizar cache depois de consolidar o saldo diário. |
+| Readiness e dependências | Diferenciar dependência crítica de dependência não crítica. |
 | Rastreabilidade entre componentes | Propagar o mesmo `correlationId` da requisição para o evento e para os logs de consolidação. |
 
 ## Testes de Resiliência
@@ -95,6 +98,7 @@ Testes de resiliência devem validar o comportamento da solução em falhas prev
 | Retry duplicado no `POST /entries` | API retorna o lançamento já criado sem duplicar o registro quando `Idempotency-Key` é repetida. |
 | Evento processado mais de uma vez | Saldo consolidado não é duplicado. |
 | Redis indisponível | API continua consultando saldo no PostgreSQL. |
+| RabbitMQ indisponível | Readiness da API pode retornar `Degraded`, mas a API continua apta a registrar lançamentos via Outbox. |
 | Falha ao persistir saldo | Erro é registrado e evento pode ser reprocessado. |
 | Atraso no processamento | Saldo pode ficar pendente, mas o atraso deve ser observável. |
 
