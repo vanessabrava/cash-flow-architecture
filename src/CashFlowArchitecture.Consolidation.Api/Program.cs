@@ -29,12 +29,12 @@ builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
+builder.Services.AddSingleton<FileIntegrationEventStore>();
 
 if (builder.Environment.IsEnvironment("Testing")
     || builder.Configuration.GetValue("Storage:UseFileStorage", false))
 {
     builder.Services.AddDistributedMemoryCache();
-    builder.Services.AddSingleton<FileIntegrationEventStore>();
     builder.Services.AddSingleton<IDailyBalanceStore, FileDailyBalanceStore>();
     builder.Services.AddSingleton<IDailyBalanceCache, DistributedDailyBalanceCache>();
 }

@@ -55,7 +55,7 @@ Essa idempotência protege a operação contra duplicidade acidental causada por
 
 Regras esperadas:
 
-- requisições sem `Idempotency-Key` criam um novo lançamento a cada `POST`;
+- requisições sem `Idempotency-Key` criam um novo lançamento a cada `POST`, mesmo que o payload seja igual;
 - requisições com a mesma `Idempotency-Key` para a mesma operação retornam o lançamento já criado;
 - reutilizar a mesma chave com payload diferente deve ser tratado como erro de conflito;
 - registros de idempotência devem ter retenção limitada para evitar crescimento indefinido.

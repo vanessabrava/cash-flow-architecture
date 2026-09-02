@@ -4,6 +4,7 @@ using CashFlowArchitecture.Api.Contracts.Entries;
 using CashFlowArchitecture.Core.Domain.Entries;
 using CashFlowArchitecture.Core.Domain.Events;
 using CashFlowArchitecture.Core.Abstractions;
+using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -37,11 +38,14 @@ internal static class FinancialEntryEndpoints
         IIdempotencyStore idempotencyStore,
         IIntegrationEventPublisher eventPublisher,
         IUnitOfWork unitOfWork,
+        [FromHeader(Name = IdempotencyKeyHeaderName)] string? idempotencyKey,
         CancellationToken cancellationToken)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
         var validationErrors = Validate(request);
-        var idempotencyKey = GetIdempotencyKey(httpContext);
+        idempotencyKey = string.IsNullOrWhiteSpace(idempotencyKey)
+            ? null
+            : idempotencyKey.Trim();
 
         if (validationErrors.Count > 0)
         {
@@ -153,15 +157,6 @@ internal static class FinancialEntryEndpoints
         }
 
         return errors;
-    }
-
-    private static string? GetIdempotencyKey(HttpContext httpContext)
-    {
-        var headerValue = httpContext.Request.Headers[IdempotencyKeyHeaderName].FirstOrDefault();
-
-        return string.IsNullOrWhiteSpace(headerValue)
-            ? null
-            : headerValue.Trim();
     }
 
     private static string ComputeRequestHash(CreateFinancialEntryRequest request)

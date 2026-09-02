@@ -115,12 +115,16 @@ X-Api-Key: cash_flow_local_api_key
 
 Quando `Idempotency-Key` não for informado, cada requisição `POST /entries` deve ser tratada como uma nova criação.
 
+Isso significa que duas chamadas iguais sem `Idempotency-Key` podem criar dois lançamentos diferentes. Esse comportamento é intencional, porque duas vendas com mesmo tipo, valor, descrição e data podem ser legítimas.
+
 Quando `Idempotency-Key` for informado:
 
 - a primeira requisição válida retorna `201 Created`;
 - a repetição da mesma chave com o mesmo conteúdo retorna `200 OK` com o mesmo lançamento já criado;
 - a repetição da mesma chave com conteúdo diferente retorna `409 Conflict`;
 - a repetição da mesma chave não deve criar novo lançamento nem novo evento de integração.
+
+No Swagger da API de Lançamentos, esse header deve aparecer como parâmetro opcional da operação `POST /entries`.
 
 #### Requisição
 

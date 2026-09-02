@@ -291,6 +291,7 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         Assert.True(paths.TryGetProperty("/health/ready", out _));
         Assert.True(paths.TryGetProperty("/entries", out _));
 
+        Assert.True(PostEntriesHasIdempotencyKeyHeader(paths));
         Assert.True(HasStringEntryTypeSchema(body.RootElement));
         Assert.True(HasApiKeySecurityScheme(body.RootElement));
     }
@@ -355,5 +356,22 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
             && apiKey.GetProperty("type").GetString() == "apiKey"
             && apiKey.GetProperty("name").GetString() == "X-Api-Key"
             && apiKey.GetProperty("in").GetString() == "header";
+    }
+
+    private static bool PostEntriesHasIdempotencyKeyHeader(JsonElement paths)
+    {
+        if (!paths.TryGetProperty("/entries", out var entriesPath)
+            || !entriesPath.TryGetProperty("post", out var postOperation)
+            || !postOperation.TryGetProperty("parameters", out var parameters))
+        {
+            return false;
+        }
+
+        return parameters.EnumerateArray().Any(parameter =>
+            parameter.TryGetProperty("name", out var name)
+            && parameter.TryGetProperty("in", out var location)
+            && name.GetString() == "Idempotency-Key"
+            && location.GetString() == "header"
+            && (!parameter.TryGetProperty("required", out var required) || required.GetBoolean() == false));
     }
 }

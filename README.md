@@ -446,6 +446,8 @@ X-Api-Key: cash_flow_local_api_key
 
 No Swagger, clique em `Authorize`, informe `cash_flow_local_api_key` e confirme. Depois disso, o Swagger envia o header `X-Api-Key` automaticamente nas chamadas protegidas.
 
+No `POST /entries`, o Swagger também exibe o header opcional `Idempotency-Key`. Use esse header quando estiver repetindo a mesma tentativa lógica de criação, por exemplo após timeout ou retry do consumidor.
+
 Nesta implementação, os lançamentos financeiros e os saldos consolidados são persistidos no PostgreSQL local por meio de EF Core.
 
 ```text
@@ -458,7 +460,7 @@ outbox_messages
 
 O endpoint `POST /entries` aceita o header opcional `Idempotency-Key`.
 
-- Sem `Idempotency-Key`, cada chamada cria um novo lançamento.
+- Sem `Idempotency-Key`, cada chamada cria um novo lançamento, mesmo que tipo, valor, descrição e data sejam iguais. Isso é intencional, porque duas vendas iguais podem ser lançamentos legítimos.
 - Com `Idempotency-Key`, repetir a mesma chave com o mesmo conteúdo retorna o lançamento já criado e não duplica o registro.
 - Reutilizar a mesma chave com conteúdo diferente retorna `409 Conflict`.
 
