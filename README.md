@@ -317,15 +317,37 @@ O endpoint `POST /entries` aceita o header opcional `Idempotency-Key`.
 - Com `Idempotency-Key`, repetir a mesma chave com o mesmo conteúdo retorna o lançamento já criado e não duplica o registro.
 - Reutilizar a mesma chave com conteúdo diferente retorna `409 Conflict`.
 
-Ao criar um lançamento, a API ainda registra um evento local `EntryCreated` em arquivo JSON:
+Ao criar um lançamento, a API publica o evento `EntryCreated` no RabbitMQ.
+
+Configuração local da mensageria:
+
+```text
+Exchange: cash-flow.events
+Queue: cash-flow.entry-created
+Routing key: entry.created
+```
+
+Nesta etapa, a API também mantém uma cópia local temporária do evento em arquivo JSON:
 
 ```text
 src/CashFlowArchitecture.Api/data/integration-events.json
 ```
 
-A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A evolução planejada é substituir o arquivo de eventos por RabbitMQ.
+A pasta `data/` é ignorada pelo Git porque contém dados locais de execução.
 
-Nesta etapa, o RabbitMQ já está disponível no Docker Compose, mas a API ainda não publica mensagens nele. Por isso, é esperado que nenhuma fila seja criada no painel do RabbitMQ após cadastrar um lançamento.
+Esse arquivo local existe apenas para manter o endpoint manual de consolidação funcionando enquanto o worker assíncrono ainda não foi separado em outro serviço.
+
+Após cadastrar um lançamento, a fila `cash-flow.entry-created` deve aparecer no RabbitMQ Management.
+
+Para validar no painel:
+
+1. Abra `http://localhost:15672`.
+2. Entre com usuário `cash_flow_user` e senha `cash_flow_password`.
+3. Acesse a aba `Queues and Streams`.
+4. Abra a fila `cash-flow.entry-created`.
+5. Verifique se o contador de publicações aumentou após chamar `POST /entries`.
+
+Como ainda não existe consumer nessa etapa, as mensagens ficam disponíveis para consumo pelo futuro worker de consolidação.
 
 Enquanto o worker assíncrono não for implementado, a consolidação ainda é disparada manualmente pelo endpoint:
 
@@ -468,4 +490,4 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 
 1. Refinar requisitos funcionais e não funcionais.
 2. Evoluir persistência para PostgreSQL com EF Core quando necessário.
-3. Evoluir o processamento local para worker assíncrono.
+3. Evoluir o processamento local para worker assíncrono consumindo RabbitMQ.

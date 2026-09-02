@@ -30,12 +30,13 @@ internal static class FinancialEntryEndpoints
             .WithDescription("Retorna os lançamentos financeiros registrados para a data informada.");
     }
 
-    private static IResult Create(
+    private static async Task<IResult> Create(
         CreateFinancialEntryRequest request,
         HttpContext httpContext,
         IFinancialEntryStore store,
         IIdempotencyStore idempotencyStore,
-        FileIntegrationEventStore eventStore)
+        IIntegrationEventPublisher eventPublisher,
+        CancellationToken cancellationToken)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
         var validationErrors = Validate(request);
@@ -94,7 +95,7 @@ internal static class FinancialEntryEndpoints
             DateTimeOffset.UtcNow);
 
         store.Add(entry);
-        eventStore.Add(EntryCreatedEvent.From(entry, correlationId));
+        await eventPublisher.PublishAsync(EntryCreatedEvent.From(entry, correlationId), cancellationToken);
 
         if (idempotencyKey is not null)
         {

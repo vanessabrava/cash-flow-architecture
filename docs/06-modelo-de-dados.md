@@ -2,7 +2,7 @@
 
 Este documento descreve o modelo de dados da solução para suportar lançamentos financeiros e saldo diário consolidado.
 
-Na implementação atual, a persistência relacional usa PostgreSQL com EF Core. Eventos de integração ainda são registrados localmente em arquivo JSON até a evolução para RabbitMQ.
+Na implementação atual, a persistência relacional usa PostgreSQL com EF Core. Eventos de integração são publicados no RabbitMQ e também registrados localmente em arquivo JSON de forma temporária, até a separação do worker assíncrono de consolidação.
 
 ## Diretriz de Identificação
 

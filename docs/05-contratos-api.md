@@ -191,9 +191,9 @@ POST /daily-balances/process-events
 }
 ```
 
-Esse endpoint representa um processamento local simplificado dos eventos `EntryCreated`. Em uma evolução da arquitetura, esse processamento deve ser substituído por um worker assíncrono consumindo uma fila ou tópico de mensageria.
+Esse endpoint representa um processamento local simplificado dos eventos `EntryCreated`. Em uma evolução da arquitetura, esse processamento deve ser substituído por um worker assíncrono consumindo RabbitMQ.
 
-Na implementação atual, o RabbitMQ já está disponível no ambiente local, mas a publicação de eventos ainda é registrada em arquivo JSON. Portanto, enquanto o worker e a publicação real em RabbitMQ não forem implementados, é esperado que o painel do RabbitMQ não exiba filas criadas pela aplicação.
+Na implementação atual, a API já publica o evento no RabbitMQ e também mantém uma cópia local temporária em arquivo JSON. Essa cópia existe apenas para permitir o processamento manual enquanto o worker separado ainda não foi implementado.
 
 ### Consultar Saldo Diário
 
@@ -290,7 +290,15 @@ Quando a consolidação ainda não tiver sido processada para a data solicitada,
 
 Após a criação de um lançamento, a API de Lançamentos deve publicar um evento para permitir a consolidação assíncrona.
 
-Na implementação atual, esse evento ainda é persistido localmente em arquivo JSON. A publicação em RabbitMQ está planejada para uma etapa posterior da evolução da arquitetura.
+Na implementação atual, esse evento é publicado no RabbitMQ com a seguinte configuração local:
+
+| Item | Valor |
+| --- | --- |
+| Exchange | `cash-flow.events` |
+| Queue | `cash-flow.entry-created` |
+| Routing key | `entry.created` |
+
+A API também registra uma cópia local temporária do evento em arquivo JSON para manter o endpoint manual de processamento disponível até a criação do worker assíncrono.
 
 ### Evento: EntryCreated
 

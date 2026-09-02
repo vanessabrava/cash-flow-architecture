@@ -4,7 +4,7 @@ using CashFlowArchitecture.Api.Domain.Events;
 
 namespace CashFlowArchitecture.Api.Infrastructure;
 
-internal sealed class FileIntegrationEventStore
+internal sealed class FileIntegrationEventStore : IIntegrationEventPublisher
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -33,6 +33,13 @@ internal sealed class FileIntegrationEventStore
             events.Add(integrationEvent);
             Save(events);
         }
+    }
+
+    public Task PublishAsync(EntryCreatedEvent integrationEvent, CancellationToken cancellationToken)
+    {
+        Add(integrationEvent);
+
+        return Task.CompletedTask;
     }
 
     public IReadOnlyCollection<EntryCreatedEvent> GetAll()

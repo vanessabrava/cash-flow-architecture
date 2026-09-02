@@ -16,6 +16,14 @@ Planejar a consolidação diária como um processamento assíncrono.
 
 Após registrar um lançamento, a solução deve publicar uma informação de alteração para que a consolidação seja processada separadamente. A API de Lançamentos não deve depender da conclusão da consolidação para responder ao comerciante.
 
+Nesta etapa da implementação, a API publica eventos `EntryCreated` no RabbitMQ usando:
+
+- exchange `cash-flow.events`;
+- fila `cash-flow.entry-created`;
+- routing key `entry.created`.
+
+Enquanto o worker separado ainda não existir, a API mantém uma cópia local temporária dos eventos para permitir o processamento manual pelo endpoint `POST /daily-balances/process-events`.
+
 ## Consequências Positivas
 
 - Mantém o registro de lançamentos desacoplado do cálculo de saldo.
@@ -30,6 +38,7 @@ Após registrar um lançamento, a solução deve publicar uma informação de al
 - Será necessário monitorar falhas no processamento assíncrono.
 - A solução precisará prever reprocessamento e tratamento de duplicidade.
 - A arquitetura fica mais complexa do que um fluxo totalmente síncrono.
+- A solução deve evoluir para Outbox ou mecanismo equivalente antes de produção, evitando perda de evento em falhas entre gravação no banco e publicação na mensageria.
 
 ## Alternativas Consideradas
 

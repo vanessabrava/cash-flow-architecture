@@ -22,6 +22,8 @@ if (builder.Environment.IsEnvironment("Testing")
     builder.Services.AddSingleton<IFinancialEntryStore, FileFinancialEntryStore>();
     builder.Services.AddSingleton<IDailyBalanceStore, FileDailyBalanceStore>();
     builder.Services.AddSingleton<IIdempotencyStore, FileIdempotencyStore>();
+    builder.Services.AddSingleton<IIntegrationEventPublisher>(provider =>
+        provider.GetRequiredService<FileIntegrationEventStore>());
 }
 else
 {
@@ -30,6 +32,8 @@ else
     builder.Services.AddScoped<IFinancialEntryStore, PostgresFinancialEntryStore>();
     builder.Services.AddScoped<IDailyBalanceStore, PostgresDailyBalanceStore>();
     builder.Services.AddScoped<IIdempotencyStore, PostgresIdempotencyStore>();
+    builder.Services.AddSingleton<RabbitMqIntegrationEventPublisher>();
+    builder.Services.AddSingleton<IIntegrationEventPublisher, FileAndRabbitMqIntegrationEventPublisher>();
 }
 
 builder.Services.AddScoped<DailyBalanceConsolidationProcessor>();

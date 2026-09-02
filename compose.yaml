@@ -9,6 +9,13 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: ${RABBITMQ_DEFAULT_USER:-cash_flow_user}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS:-cash_flow_password}
+      RabbitMq__Exchange: ${RABBITMQ_EXCHANGE:-cash-flow.events}
+      RabbitMq__Queue: ${RABBITMQ_ENTRY_CREATED_QUEUE:-cash-flow.entry-created}
+      RabbitMq__RoutingKey: ${RABBITMQ_ENTRY_CREATED_ROUTING_KEY:-entry.created}
     ports:
       - "${API_PORT:-5099}:8080"
     depends_on:

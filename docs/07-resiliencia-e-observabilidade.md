@@ -134,9 +134,8 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 
 ## Pontos Para Evolução
 
-- Definir ferramenta de mensageria.
-- Implementar publicação real de eventos no RabbitMQ.
 - Implementar worker assíncrono de consolidação consumindo RabbitMQ.
+- Evoluir a publicação para padrão Outbox antes de produção.
 - Definir política de retentativas.
 - Definir estratégia de fila de erro.
 - Definir limites aceitáveis de atraso na consolidação.
