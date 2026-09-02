@@ -14,6 +14,7 @@ Este documento descreve uma proposta inicial de contratos HTTP para as capacidad
 - Requisições devem aceitar o header `X-Correlation-Id` para rastreabilidade ponta a ponta.
 - Quando o consumidor não enviar `X-Correlation-Id`, a API deve gerar um novo `correlationId`.
 - Respostas devem retornar o `correlationId` para facilitar diagnóstico e suporte.
+- A criação de lançamentos deve aceitar o header `Idempotency-Key` para evitar duplicidade causada por retry do consumidor.
 
 ## Rastreabilidade
 
@@ -40,6 +41,20 @@ Responsável por registrar e consultar lançamentos financeiros.
 ```http
 POST /entries
 ```
+
+#### Headers
+
+```http
+X-Correlation-Id: 4a11b94c-45b7-4a48-9cb4-917ecf2c7f31
+Idempotency-Key: 8d7f7d9c-6b3b-4a0c-8f7a-123456789abc
+```
+
+| Header | Obrigatório | Descrição |
+| --- | --- | --- |
+| X-Correlation-Id | Não | Identificador de rastreabilidade técnica da requisição. |
+| Idempotency-Key | Não | Identificador da tentativa lógica de criação. Quando repetido, deve retornar o lançamento já criado sem duplicar o registro. |
+
+Quando `Idempotency-Key` não for informado, cada requisição `POST /entries` deve ser tratada como uma nova criação.
 
 #### Requisição
 
@@ -143,6 +158,8 @@ POST /daily-balances/process-events
 
 Esse endpoint representa um processamento local simplificado dos eventos `EntryCreated`. Em uma evolução da arquitetura, esse processamento deve ser substituído por um worker assíncrono consumindo uma fila ou tópico de mensageria.
 
+Na implementação atual, o RabbitMQ já está disponível no ambiente local, mas a publicação de eventos ainda é registrada em arquivo JSON. Portanto, enquanto o worker e a publicação real em RabbitMQ não forem implementados, é esperado que o painel do RabbitMQ não exiba filas criadas pela aplicação.
+
 ### Consultar Saldo Diário
 
 ```http
@@ -237,6 +254,8 @@ Quando a consolidação ainda não tiver sido processada para a data solicitada,
 ## Eventos Entre Componentes
 
 Após a criação de um lançamento, a API de Lançamentos deve publicar um evento para permitir a consolidação assíncrona.
+
+Na implementação atual, esse evento ainda é persistido localmente em arquivo JSON. A publicação em RabbitMQ está planejada para uma etapa posterior da evolução da arquitetura.
 
 ### Evento: EntryCreated
 

@@ -11,6 +11,7 @@ A estratégia de testes deve garantir que:
 - o saldo diário seja calculado corretamente;
 - a consolidação não bloqueie o registro de lançamentos;
 - eventos duplicados não gerem saldo duplicado;
+- retries na criação de lançamentos não criem duplicidade quando `Idempotency-Key` for enviada;
 - falhas de consolidação possam ser diagnosticadas e reprocessadas;
 - contratos públicos não exponham IDs internos do banco de dados.
 - `correlationId` seja retornado e propagado entre API, eventos e consolidação.
@@ -35,7 +36,8 @@ Testes unitários devem validar regras isoladas do domínio e casos de cálculo.
 | Lançamentos | Criar crédito válido, criar débito válido, rejeitar valor menor ou igual a zero, rejeitar tipo inválido. |
 | Consolidação | Somar créditos, somar débitos, calcular saldo final, consolidar data sem lançamentos. |
 | Identificação | Gerar `uid` público, não depender de `id` interno em regras públicas. |
-| Idempotência | Ignorar evento já processado ou garantir que reprocessamento não duplique saldo. |
+| Idempotência de criação | Reutilizar resultado quando `Idempotency-Key` for repetida no `POST /entries`. |
+| Idempotência de consolidação | Ignorar evento já processado ou garantir que reprocessamento não duplique saldo. |
 
 ## Testes de API
 
@@ -44,6 +46,8 @@ Testes de API devem validar contratos HTTP, payloads e códigos de resposta.
 | Endpoint | Cenários |
 | --- | --- |
 | `POST /entries` | Retornar `201 Created` para lançamento válido. |
+| `POST /entries` | Retornar o mesmo lançamento quando a mesma `Idempotency-Key` for repetida. |
+| `POST /entries` | Retornar erro de conflito quando a mesma `Idempotency-Key` for reutilizada com payload diferente. |
 | `POST /entries` | Retornar `400 Bad Request` para valor inválido. |
 | `POST /entries` | Retornar `400 Bad Request` para tipo inválido. |
 | `GET /entries?date=YYYY-MM-DD` | Retornar lançamentos da data solicitada. |
@@ -73,6 +77,7 @@ Testes de resiliência devem validar o comportamento da solução em falhas prev
 | Cenário | Resultado Esperado |
 | --- | --- |
 | Consolidação indisponível | API de Lançamentos continua registrando novos lançamentos. |
+| Retry duplicado no `POST /entries` | API retorna o lançamento já criado sem duplicar o registro quando `Idempotency-Key` é repetida. |
 | Evento processado mais de uma vez | Saldo consolidado não é duplicado. |
 | Falha ao persistir saldo | Erro é registrado e evento pode ser reprocessado. |
 | Atraso no processamento | Saldo pode ficar pendente, mas o atraso deve ser observável. |

@@ -30,6 +30,20 @@ Representa um lançamento financeiro registrado pelo comerciante.
 | createdAt | data/hora | Sim | Data e hora de criação do registro. |
 | updatedAt | data/hora | Não | Data e hora da última atualização, quando aplicável. |
 
+## Entidade: IdempotencyRecord
+
+Representa o controle de idempotência para evitar duplicidade acidental na criação de lançamentos.
+
+| Campo | Tipo Conceitual | Obrigatório | Descrição |
+| --- | --- | --- | --- |
+| id | inteiro | Sim | Identificador interno do banco de dados. |
+| key | texto | Sim | Chave de idempotência recebida no header `Idempotency-Key`. |
+| operation | texto | Sim | Operação protegida pela chave, por exemplo `POST /entries`. |
+| resourceUid | GUID | Sim | UID público do recurso criado na primeira execução. |
+| requestHash | texto | Sim | Hash do payload usado para detectar reutilização da mesma chave com conteúdo diferente. |
+| createdAt | data/hora | Sim | Data e hora em que a chave foi registrada. |
+| expiresAt | data/hora | Sim | Data e hora limite para retenção operacional da chave. |
+
 ## Regras da Entidade FinancialEntry
 
 - O campo `amount` deve ser maior que zero.
@@ -37,6 +51,7 @@ Representa um lançamento financeiro registrado pelo comerciante.
 - O campo `uid` deve ser único.
 - O campo `id` não deve ser retornado nos contratos públicos.
 - Um lançamento registrado deve ser preservado para rastreabilidade.
+- Quando `Idempotency-Key` for informada na criação, a mesma chave não deve criar lançamentos duplicados.
 
 ## Entidade: DailyBalance
 
@@ -117,6 +132,16 @@ erDiagram
         guid eventUid
     }
 
+    IDEMPOTENCY_RECORD {
+        int id
+        string key
+        string operation
+        guid resourceUid
+        string requestHash
+        datetime createdAt
+        datetime expiresAt
+    }
+
     DAILY_BALANCE ||--o{ DAILY_BALANCE_PROCESSED_EVENT : controla
 ```
 
@@ -129,6 +154,9 @@ O relacionamento entre lançamentos e saldo diário é derivado pela data de ref
 | FinancialEntry | id | Chave interna e acesso por relacionamento no banco. |
 | FinancialEntry | uid | Consulta por identificador público. |
 | FinancialEntry | entryDate | Consulta de lançamentos por data e suporte ao reprocessamento. |
+| IdempotencyRecord | id | Chave interna do banco. |
+| IdempotencyRecord | key + operation | Evitar duplicidade por retry na mesma operação. |
+| IdempotencyRecord | expiresAt | Apoiar limpeza periódica de registros antigos. |
 | DailyBalance | id | Chave interna do banco. |
 | DailyBalance | uid | Consulta por identificador público, se necessário. |
 | DailyBalance | balanceDate | Consulta do saldo consolidado por data. |

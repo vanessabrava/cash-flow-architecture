@@ -13,6 +13,7 @@ A solução deve continuar aceitando lançamentos financeiros mesmo quando a con
 | Falha temporária no processador de consolidação | Novos lançamentos continuam sendo registrados, mas o saldo pode ficar atrasado. | Manter eventos pendentes para processamento posterior. |
 | Falha ao atualizar saldo consolidado | Saldo da data pode ficar desatualizado ou com status de falha. | Registrar erro, permitir nova tentativa e preservar os lançamentos originais. |
 | Duplicidade no processamento de evento | Saldo pode ser calculado incorretamente se o evento for aplicado mais de uma vez. | Prever processamento idempotente na consolidação. |
+| Retry duplicado na criação de lançamento | O mesmo lançamento pode ser registrado mais de uma vez por timeout, clique duplicado ou retry automático. | Aceitar `Idempotency-Key` no `POST /entries` para reaproveitar o resultado da primeira criação. |
 | Lentidão no canal de eventos | Atraso entre lançamento e saldo consolidado. | Monitorar fila, atraso de consumo e volume pendente. |
 | Erro de validação no lançamento | Lançamento não deve ser registrado. | Retornar erro claro para o consumidor da API. |
 
@@ -36,6 +37,17 @@ O processamento da consolidação deve ser idempotente. Isso significa que proce
 
 Uma estratégia possível é registrar quais eventos já foram aplicados ou recalcular o saldo diário a partir da fonte principal de lançamentos.
 
+A criação de lançamentos também deve oferecer idempotência opcional por meio do header `Idempotency-Key`.
+
+Essa idempotência protege a operação contra duplicidade acidental causada por retry do consumidor. Ela não deve impedir lançamentos legítimos com mesmo tipo, valor, descrição e data. A chave de idempotência representa a tentativa lógica de criação, não o conteúdo financeiro do lançamento.
+
+Regras esperadas:
+
+- requisições sem `Idempotency-Key` criam um novo lançamento a cada `POST`;
+- requisições com a mesma `Idempotency-Key` para a mesma operação retornam o lançamento já criado;
+- reutilizar a mesma chave com payload diferente deve ser tratado como erro de conflito;
+- registros de idempotência devem ter retenção limitada para evitar crescimento indefinido.
+
 ### Consistência Eventual
 
 Como a consolidação é assíncrona, o saldo consultado pode não refletir imediatamente um lançamento recém-criado.
@@ -49,6 +61,7 @@ Os logs devem permitir rastrear as principais operações da solução.
 | Operação | Informações Relevantes |
 | --- | --- |
 | Criação de lançamento | `correlationId`, `entryUid`, tipo, valor, data de referência e momento da criação. |
+| Reutilização de chave de idempotência | `correlationId`, `idempotencyKey`, operação, `entryUid` retornado e resultado da reutilização. |
 | Publicação de evento | `correlationId`, `eventUid`, `entryUid`, tipo do evento e momento da publicação. |
 | Processamento de consolidação | `correlationId`, `eventUid`, `entryUid`, data consolidada e resultado do processamento. |
 | Falha de consolidação | `correlationId`, `eventUid`, `entryUid`, motivo da falha e tentativa de processamento. |
@@ -84,6 +97,8 @@ Métricas sugeridas para acompanhar a saúde da solução:
 | Quantidade de falhas de consolidação | Identificar instabilidade no processamento. |
 | Quantidade de reprocessamentos | Avaliar necessidade de correção operacional. |
 | Requisições sem `correlationId` recebido | Avaliar maturidade dos consumidores e necessidade de geração interna. |
+| Reutilização de `Idempotency-Key` | Acompanhar retries e possíveis problemas de comunicação com consumidores. |
+| Conflitos de `Idempotency-Key` | Identificar reutilização incorreta da mesma chave para payload diferente. |
 
 ## Health Checks
 
@@ -120,6 +135,8 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 ## Pontos Para Evolução
 
 - Definir ferramenta de mensageria.
+- Implementar publicação real de eventos no RabbitMQ.
+- Implementar worker assíncrono de consolidação consumindo RabbitMQ.
 - Definir política de retentativas.
 - Definir estratégia de fila de erro.
 - Definir limites aceitáveis de atraso na consolidação.

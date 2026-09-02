@@ -25,7 +25,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 ├── docs
 │   ├── adr
 │   │   ├── 0001-separar-lancamentos-e-consolidacao.md
-│   │   └── 0002-processar-consolidacao-de-forma-assincrona.md
+│   │   ├── 0002-processar-consolidacao-de-forma-assincrona.md
+│   │   └── 0003-usar-idempotency-key-na-criacao-de-lancamentos.md
 │   ├── 01-contexto-e-objetivo.md
 │   ├── 02-requisitos-iniciais.md
 │   ├── 03-premissas-restricoes-e-decisoes.md
@@ -56,6 +57,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [Estratégia de testes](docs/08-estrategia-de-testes.md)
 - [ADR 0001 - Separar lançamentos e consolidação](docs/adr/0001-separar-lancamentos-e-consolidacao.md)
 - [ADR 0002 - Processar consolidação de forma assíncrona](docs/adr/0002-processar-consolidacao-de-forma-assincrona.md)
+- [ADR 0003 - Usar Idempotency-Key na criação de lançamentos](docs/adr/0003-usar-idempotency-key-na-criacao-de-lancamentos.md)
 
 ## Idioma do Projeto
 
@@ -315,6 +317,14 @@ src/CashFlowArchitecture.Api/data/integration-events.json
 ```
 
 A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A evolução planejada é substituir o arquivo de eventos por RabbitMQ.
+
+Nesta etapa, o RabbitMQ já está disponível no Docker Compose, mas a API ainda não publica mensagens nele. Por isso, é esperado que nenhuma fila seja criada no painel do RabbitMQ após cadastrar um lançamento.
+
+Enquanto o worker assíncrono não for implementado, a consolidação ainda é disparada manualmente pelo endpoint:
+
+```http
+POST /daily-balances/process-events
+```
 
 ### Visual Studio Code
 
