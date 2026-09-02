@@ -15,7 +15,7 @@ O objetivo é organizar a solução de forma progressiva, separando entendimento
 
 Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao longo do dia e consultar o saldo diário consolidado. A solução deve considerar a continuidade do serviço de lançamentos mesmo quando o processamento de consolidação estiver indisponível.
 
-## Estrutura Inicial
+## Estrutura Atual
 
 ```text
 .
@@ -112,7 +112,7 @@ dotnet test CashFlowArchitecture.slnx --collect:"XPlat Code Coverage" --results-
 
 ### Infraestrutura Local
 
-O arquivo `compose.yaml` prepara a aplicação e os serviços planejados para a evolução da arquitetura:
+O arquivo `compose.yaml` prepara a aplicação e os serviços necessários para a execução local da arquitetura:
 
 - API .NET exposta localmente com Swagger.
 - PostgreSQL 17 para persistência relacional.
@@ -152,7 +152,7 @@ Esse comando instala as ferramentas declaradas em `dotnet-tools.json`, incluindo
 Passo 4: criar ou atualizar as tabelas no PostgreSQL local.
 
 ```bash
-dotnet tool run dotnet-ef database update --project src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj --startup-project src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj
+dotnet tool run dotnet-ef database update --project src/CashFlowArchitecture.Infrastructure/CashFlowArchitecture.Infrastructure.csproj --startup-project src/CashFlowArchitecture.Infrastructure/CashFlowArchitecture.Infrastructure.csproj
 ```
 
 Esse comando aplica as migrations do EF Core no banco `cash_flow`.
@@ -533,6 +533,8 @@ Isso faz o VS Code herdar o mesmo PATH do terminal. Outra alternativa é criar u
 
 As próximas entregas devem evoluir o repositório em partes pequenas e commitáveis, por exemplo:
 
-1. Refinar requisitos funcionais e não funcionais.
-2. Evoluir persistência para PostgreSQL com EF Core quando necessário.
-3. Separar o worker em um projeto .NET próprio dentro da solution.
+1. Implementar autenticação e autorização nos endpoints.
+2. Evoluir publicação de eventos para padrão Outbox.
+3. Adicionar política de retentativas e fila de erro no RabbitMQ.
+4. Criar testes de integração com PostgreSQL e RabbitMQ em containers.
+5. Detalhar observabilidade com logs estruturados, métricas, tracing e health checks de dependências.

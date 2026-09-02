@@ -1,6 +1,6 @@
 # Estratégia de Testes
 
-Este documento descreve a estratégia inicial de testes para a solução. O objetivo é orientar a futura implementação, garantindo que as regras principais do domínio, os contratos de API e os comportamentos de resiliência sejam validados.
+Este documento descreve a estratégia de testes para a solução. O objetivo é orientar a evolução da implementação, garantindo que as regras principais do domínio, os contratos de API e os comportamentos de resiliência sejam validados.
 
 ## Objetivos
 
@@ -115,8 +115,8 @@ Testes end-to-end devem cobrir apenas jornadas essenciais.
 
 ## Pontos Para Evolução
 
-- Definir ferramentas de teste conforme a stack escolhida.
-- Definir estratégia de dados de teste.
-- Definir cobertura mínima esperada.
-- Definir testes automatizados em pipeline de CI.
+- Ampliar cobertura para testes de integração com PostgreSQL e RabbitMQ reais em containers.
+- Definir cobertura mínima esperada para aprovação de Pull Request.
+- Adicionar testes automatizados específicos para o worker de consolidação.
+- Validar comportamento de retentativa e fila de erro quando essa estratégia for implementada.
 - Definir testes de carga para endpoints críticos.

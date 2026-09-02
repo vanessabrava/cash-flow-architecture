@@ -21,18 +21,17 @@ Propor uma arquitetura que permita:
 - Consultar o saldo diário consolidado.
 - Manter o serviço de lançamentos disponível mesmo se o serviço de consolidação estiver indisponível.
 
-## Escopo Inicial
+## Escopo Atual
 
-Nesta primeira etapa, o repositório contém apenas a base documental do desafio. A implementação, os diagramas, as decisões arquiteturais detalhadas e a modelagem técnica serão adicionados em etapas futuras.
+O repositório já contém documentação arquitetural, decisões registradas em ADRs, implementação inicial da API, persistência em PostgreSQL, publicação de eventos no RabbitMQ, worker assíncrono de consolidação, Docker Compose e pipeline de CI.
 
-## Fora do Escopo Nesta Etapa
+## Fora do Escopo Atual
 
-Para manter a evolução do projeto organizada, esta etapa ainda não cobre:
+Para manter a evolução do projeto organizada, o escopo atual ainda não cobre:
 
-- Implementação de APIs.
-- Escolha final de tecnologias.
-- Criação de banco de dados.
-- Mensageria ou processamento assíncrono.
-- Diagramas de arquitetura.
-- Scripts de infraestrutura.
-- Pipeline de CI/CD.
+- Autenticação e autorização.
+- Padrão Outbox para garantir atomicidade entre gravação no banco e publicação de evento.
+- Fila de erro para mensagens que falharem repetidamente.
+- Observabilidade completa com dashboards, métricas e tracing distribuído.
+- Testes de carga.
+- Deploy em ambiente cloud.

@@ -1,6 +1,6 @@
 # Arquitetura Lógica
 
-Este documento apresenta uma visão lógica inicial da solução, sem definir ainda tecnologias, frameworks ou provedores específicos.
+Este documento apresenta a visão lógica da solução e relaciona essa visão com a implementação incremental disponível no repositório.
 
 ## Objetivo da Arquitetura
 
@@ -58,7 +58,7 @@ flowchart LR
 
 A API de Lançamentos não depende da disponibilidade da API de Consulta de Saldo nem do Processador de Consolidação para registrar novos lançamentos.
 
-Caso a consolidação esteja temporariamente indisponível, os lançamentos continuam sendo registrados. A consolidação pode ser retomada posteriormente a partir dos eventos pendentes ou a partir da base de lançamentos, conforme a estratégia técnica definida nas próximas etapas.
+Caso a consolidação esteja temporariamente indisponível, os lançamentos continuam sendo registrados. A consolidação pode ser retomada posteriormente a partir dos eventos pendentes no RabbitMQ.
 
 ## Consistência dos Dados
 
@@ -66,24 +66,24 @@ Como a consolidação pode acontecer de forma assíncrona, a consulta de saldo p
 
 Essa característica precisa ser comunicada na solução e tratada com observabilidade, reprocessamento e rastreabilidade.
 
-## Próximos Detalhamentos
+## Detalhamentos Registrados
 
-Esta visão lógica será refinada nas próximas etapas com:
+Esta visão lógica foi detalhada nos seguintes documentos:
 
-- Decisões arquiteturais formais.
+- ADRs em `docs/adr`.
 - Contratos de API.
 - Modelo de dados.
 - Estratégia de mensageria com RabbitMQ.
-- Estratégia de resiliência.
-- Estratégia de observabilidade.
-- Base inicial de implementação.
+- Estratégia de resiliência e observabilidade.
+- Estratégia de testes.
+- Guia de execução local no README.
 
-## Tecnologias Planejadas
+## Tecnologias Utilizadas
 
 | Componente | Tecnologia | Observação |
 | --- | --- | --- |
 | API | .NET com C# | Projeto `CashFlowArchitecture.Api`, responsável pelos contratos HTTP e regras de entrada. |
-| Persistência | PostgreSQL | Banco relacional planejado para lançamentos e saldos consolidados. |
+| Persistência | PostgreSQL | Banco relacional para lançamentos, saldos consolidados, eventos processados e idempotência. |
 | Consulta local de dados | Adminer | Interface web local para inspecionar o PostgreSQL durante o desenvolvimento. |
 | Mensageria | RabbitMQ | Canal de publicação de eventos como `EntryCreated`. |
 | Worker de consolidação | .NET Worker Service | Projeto `CashFlowArchitecture.Worker`, responsável por consumir eventos do RabbitMQ e atualizar o saldo diário consolidado. |

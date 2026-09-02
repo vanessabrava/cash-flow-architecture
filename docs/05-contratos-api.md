@@ -319,7 +319,7 @@ A API também registra uma cópia local temporária do evento em arquivo JSON pa
 
 ## Observações
 
-- Os nomes dos endpoints ainda podem ser ajustados durante a implementação.
+- Os endpoints documentados representam os contratos atuais da implementação incremental.
 - A autenticação será detalhada em etapa posterior.
 - Paginação, filtros adicionais e ordenação serão avaliados conforme a evolução da solução.
 - A consistência eventual deve ser considerada na consulta do saldo consolidado.

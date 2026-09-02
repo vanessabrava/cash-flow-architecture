@@ -1,6 +1,6 @@
 # Premissas, Restrições e Decisões
 
-Este documento registra os pontos usados para orientar a arquitetura antes da escolha final de tecnologias e implementação.
+Este documento registra os pontos usados para orientar a arquitetura e acompanhar decisões tomadas durante a evolução incremental do desafio.
 
 ## Premissas
 
@@ -26,29 +26,30 @@ Restrições são limites ou condições que a solução precisa respeitar.
 | RE-004 | A consulta de saldo diário não deve exigir recalcular todo o histórico a cada requisição. |
 | RE-005 | A primeira versão da solução deve permanecer simples o suficiente para ser compreendida e evoluída. |
 
-## Decisões Iniciais
+## Decisões Arquiteturais
 
-As decisões abaixo ainda são de alto nível e serão detalhadas posteriormente em documentos de decisão arquitetural.
+As decisões abaixo consolidam escolhas já registradas ou implementadas no repositório. Decisões mais relevantes possuem ADR específico.
 
 | ID | Decisão | Justificativa |
 | --- | --- | --- |
 | DA-001 | Separar o domínio de lançamentos do domínio de consolidação. | Essa separação reduz acoplamento e ajuda a manter lançamentos disponíveis mesmo se a consolidação falhar. |
 | DA-002 | Tratar o saldo diário consolidado como uma visão derivada dos lançamentos. | O lançamento é a fonte principal da informação, enquanto o saldo consolidado pode ser recalculado. |
-| DA-003 | Planejar a comunicação entre lançamento e consolidação de forma assíncrona. | O processamento assíncrono favorece resiliência e desacoplamento entre os serviços. |
-| DA-004 | Documentar a arquitetura antes da implementação. | Isso torna explícitas as escolhas técnicas e facilita a avaliação do desafio. |
+| DA-003 | Usar comunicação assíncrona entre lançamento e consolidação via RabbitMQ. | O processamento assíncrono favorece resiliência e desacoplamento entre os serviços. |
+| DA-004 | Persistir dados relacionais em PostgreSQL com EF Core Migrations. | Essa escolha facilita consistência relacional, evolução controlada do schema e execução local em container. |
+| DA-005 | Usar `Idempotency-Key` no `POST /entries`. | Essa decisão evita duplicidade acidental causada por retry do consumidor. |
+| DA-006 | Separar a solution em `Api`, `Worker`, `Core` e `Infrastructure`. | Essa organização evita dependência direta entre serviços executáveis e mantém a implementação proporcional ao desafio. |
 
 ## Pontos em Aberto
 
-Os pontos abaixo devem ser definidos nas próximas etapas:
+Os pontos abaixo permanecem como evolução planejada:
 
-- Estilo arquitetural final da solução.
-- Estratégia de comunicação entre serviços.
-- Modelo de persistência dos lançamentos.
-- Modelo de persistência do saldo consolidado.
-- Contratos de API.
 - Estratégia de autenticação.
-- Estratégia de observabilidade.
-- Estratégia de testes.
+- Estratégia de autorização.
+- Padrão Outbox para publicação confiável de eventos.
+- Política de retentativas e fila de erro.
+- Estratégia de observabilidade completa.
+- Testes de integração com dependências reais em containers.
+- Testes de carga para endpoints críticos.
 
 ## Riscos Iniciais
 

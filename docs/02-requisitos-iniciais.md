@@ -1,6 +1,6 @@
 # Requisitos Iniciais
 
-Este documento registra uma primeira leitura dos requisitos do desafio. A lista ainda será refinada nas próximas etapas, conforme a arquitetura evoluir.
+Este documento registra os requisitos principais usados para orientar o desenho e a implementação incremental do desafio.
 
 ## Requisitos Funcionais
 
@@ -22,10 +22,12 @@ Requisitos não funcionais descrevem qualidades, restrições e condições de o
 | ID | Requisito |
 | --- | --- |
 | RNF-001 | O serviço de lançamento não deve ficar indisponível se o serviço de consolidação estiver indisponível. |
-| RNF-002 | A solução deve permitir evolução para processamento assíncrono da consolidação diária. |
+| RNF-002 | A solução deve processar a consolidação diária de forma assíncrona. |
 | RNF-003 | A solução deve registrar informações suficientes para rastrear operações importantes. |
 | RNF-004 | A solução deve permitir validação automatizada por testes. |
 | RNF-005 | A arquitetura deve favorecer separação de responsabilidades entre lançamento e consolidação. |
+| RNF-006 | A API e o worker devem poder executar em containers separados. |
+| RNF-007 | A solução deve evitar duplicidade causada por retry na criação de lançamentos. |
 
 ## Dados Iniciais de Um Lançamento
 
@@ -40,4 +42,4 @@ Um lançamento financeiro deve conter, no mínimo:
 
 ## Observações
 
-Os requisitos acima representam uma base inicial para discussão arquitetural. Eles ainda não definem detalhes de API, tecnologia, banco de dados, mensageria ou estratégia de deploy.
+Os requisitos acima são atendidos parcialmente pela implementação atual. Pontos como autenticação, autorização, Outbox, fila de erro e observabilidade completa permanecem como evolução planejada.
