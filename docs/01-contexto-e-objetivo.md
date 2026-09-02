@@ -21,16 +21,15 @@ Propor uma arquitetura que permita:
 - Consultar o saldo diário consolidado.
 - Manter o serviço de lançamentos disponível mesmo se o serviço de consolidação estiver indisponível.
 
-## Escopo Atual
+## Escopo Entregue
 
-O repositório já contém documentação arquitetural, decisões registradas em ADRs, implementação inicial da API, proteção local por API Key, persistência em PostgreSQL, cache de leitura com Redis, publicação de eventos no RabbitMQ, worker assíncrono de consolidação, Docker Compose e pipeline de CI.
+O repositório contém documentação arquitetural, decisões registradas em ADRs, APIs separadas por responsabilidade, proteção local por API Key, persistência em PostgreSQL, cache de leitura com Redis, publicação confiável de eventos com Outbox, mensageria com RabbitMQ, worker assíncrono de consolidação, Docker Compose e pipeline de CI.
 
-## Fora do Escopo Atual
+## Evoluções Para Produção
 
-Para manter a evolução do projeto organizada, o escopo atual ainda não cobre:
+Os itens abaixo não impedem a entrega do desafio. Eles representam evoluções naturais para uma implantação produtiva:
 
 - Autenticação e autorização completas para produção.
-- Padrão Outbox para garantir atomicidade entre gravação no banco e publicação de evento.
 - Fila de erro para mensagens que falharem repetidamente.
 - Observabilidade completa com dashboards, métricas e tracing distribuído.
 - Testes de carga.

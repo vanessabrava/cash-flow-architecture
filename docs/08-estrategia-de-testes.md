@@ -14,9 +14,9 @@ A estratégia de testes deve garantir que:
 - retries na criação de lançamentos não criem duplicidade quando `Idempotency-Key` for enviada;
 - falhas de consolidação possam ser diagnosticadas e reprocessadas;
 - falhas temporárias de mensageria não impeçam o registro do lançamento;
-- contratos públicos não exponham IDs internos do banco de dados.
-- `correlationId` seja retornado e propagado entre API, eventos e consolidação.
-- endpoints de negócio rejeitem requisições sem autenticação.
+- contratos públicos não exponham IDs internos do banco de dados;
+- `correlationId` seja retornado e propagado entre API, eventos e consolidação;
+- endpoints de negócio rejeitem requisições sem autenticação;
 - consultas de saldo consolidado possam ser atendidas pelo cache sem depender sempre do banco;
 - consolidação atualize o cache após atualizar o saldo no PostgreSQL.
 
@@ -99,7 +99,7 @@ Testes de resiliência devem validar o comportamento da solução em falhas prev
 | Falha repetida na publicação da Outbox | Mensagem deixa de ser republicada automaticamente após atingir o limite de tentativas. |
 | Retry duplicado no `POST /entries` | API retorna o lançamento já criado sem duplicar o registro quando `Idempotency-Key` é repetida. |
 | Evento processado mais de uma vez | Saldo consolidado não é duplicado. |
-| Redis indisponível | API continua consultando saldo no PostgreSQL. |
+| Redis indisponível | API de consolidação continua consultando saldo no PostgreSQL. |
 | RabbitMQ indisponível | Readiness da API pode retornar `Degraded`, mas a API continua apta a registrar lançamentos via Outbox. |
 | Falha ao persistir saldo | Erro é registrado e evento pode ser reprocessado. |
 | Atraso no processamento | Saldo pode ficar pendente, mas o atraso deve ser observável. |
@@ -135,7 +135,9 @@ Testes end-to-end devem cobrir apenas jornadas essenciais.
 | Rastreabilidade | Falhas devem indicar claramente qual comportamento foi quebrado. |
 | Segurança do contrato | APIs públicas não devem expor IDs internos. |
 
-## Pontos Para Evolução
+## Evoluções Para Produção
+
+Os itens abaixo aumentam a maturidade de qualidade para um ambiente produtivo. Eles não bloqueiam a validação local do desafio:
 
 - Ampliar cobertura para testes de integração com PostgreSQL e RabbitMQ reais em containers.
 - Evoluir testes de autenticação quando a estratégia mudar de API Key local para OAuth2, OpenID Connect, JWT ou identidade serviço-a-serviço.

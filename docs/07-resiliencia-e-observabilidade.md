@@ -68,13 +68,13 @@ Esse comportamento deve ser tratado como parte da arquitetura, e não como erro,
 
 ### Cache de Leitura
 
-A consulta de saldo diário consolidado usa Redis como cache de leitura. A API tenta ler o saldo no cache antes de consultar o PostgreSQL.
+A consulta de saldo diário consolidado usa Redis como cache de leitura. A API de Consulta de Saldo tenta ler o saldo no cache antes de consultar o PostgreSQL.
 
 A atualização principal do cache acontece no processamento de consolidação: depois de aplicar o evento no PostgreSQL, o worker grava o saldo atualizado no Redis. O endpoint manual de processamento também atualiza o cache enquanto existir como apoio de desenvolvimento.
 
-Quando a API não encontra o saldo no Redis e encontra o saldo consolidado no PostgreSQL, ela grava uma cópia no cache. Esse comportamento cobre cache miss e recriação do cache após reinício do Redis.
+Quando a API de Consulta de Saldo não encontra o saldo no Redis e encontra o saldo consolidado no PostgreSQL, ela grava uma cópia no cache. Esse comportamento cobre cache miss e recriação do cache após reinício do Redis.
 
-O cache não é fonte da verdade. Se o Redis falhar, a API registra o problema e consulta o PostgreSQL diretamente.
+O cache não é fonte da verdade. Se o Redis falhar, a API de Consulta de Saldo registra o problema e consulta o PostgreSQL diretamente.
 
 O TTL inicial é de 15 minutos. Ele existe para limitar o risco de cache antigo preso em caso de falha operacional, não para ser o mecanismo principal de atualização do saldo.
 
@@ -82,9 +82,9 @@ O TTL inicial é de 15 minutos. Ele existe para limitar o risco de cache antigo 
 
 Os logs devem permitir rastrear as principais operações da solução.
 
-A API possui um middleware de logs HTTP estruturados. Ele obtém ou gera o `correlationId` no início da requisição, grava esse valor no header de resposta `X-Correlation-Id`, usa o mesmo valor no `TraceIdentifier` e registra método HTTP, rota, status code e duração.
+As APIs possuem middleware de logs HTTP estruturados. Ele obtém ou gera o `correlationId` no início da requisição, grava esse valor no header de resposta `X-Correlation-Id`, usa o mesmo valor no `TraceIdentifier` e registra método HTTP, rota, status code e duração.
 
-API e worker escrevem logs no console em formato JSON, com timestamp em UTC e scopes habilitados. Logs verbosos de infraestrutura em nível `Information`, como comandos SQL do EF Core, são filtrados para reduzir ruído durante a execução local.
+APIs e worker escrevem logs no console em formato JSON, com timestamp em UTC e scopes habilitados. Logs verbosos de infraestrutura em nível `Information`, como comandos SQL do EF Core, são filtrados para reduzir ruído durante a execução local.
 
 Payloads, senhas, API Keys e dados sensíveis não devem ser registrados.
 
@@ -155,10 +155,10 @@ Endpoints da API:
 | Endpoint | Objetivo |
 | --- | --- |
 | `GET /health` | Verificação básica e compatibilidade com validações locais. |
-| `GET /health/live` | Indicar se o processo da API está vivo. |
-| `GET /health/ready` | Indicar se a API está pronta para operar com dependências críticas. |
+| `GET /health/live` | Indicar se o processo da API consultada está vivo. |
+| `GET /health/ready` | Indicar se a API consultada está pronta para operar com dependências críticas. |
 
-No readiness da API, RabbitMQ é reportado como dependência não crítica porque a publicação de eventos é protegida pela Outbox. Redis também é reportado como dependência não crítica porque a API possui fallback para PostgreSQL.
+No readiness da API de Lançamentos, RabbitMQ é reportado como dependência não crítica porque a publicação de eventos é protegida pela Outbox. No readiness da API de Consulta de Saldo, Redis é reportado como dependência não crítica porque a consulta possui fallback para PostgreSQL.
 
 ## Alertas
 
@@ -171,8 +171,8 @@ Alertas devem ser considerados para situações que afetam a operação:
 - mensagens da Outbox com `failedAt` preenchido;
 - atraso elevado entre criação do lançamento e consolidação;
 - erro recorrente ao persistir saldo consolidado;
-- readiness da API retornando `Unhealthy`;
-- readiness da API retornando `Degraded` por tempo prolongado;
+- readiness de alguma API retornando `Unhealthy`;
+- readiness de alguma API retornando `Degraded` por tempo prolongado;
 - indisponibilidade da API de Lançamentos;
 - aumento anormal de respostas `401 Unauthorized`;
 - aumento de falhas de leitura ou escrita no Redis;
@@ -189,7 +189,9 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 | RNF-003 | Logs e métricas ajudam na rastreabilidade. |
 | RNF-005 | A separação de responsabilidades reduz acoplamento. |
 
-## Pontos Para Evolução
+## Evoluções Para Produção
+
+Os itens abaixo representam aumento de maturidade operacional para produção. Eles não impedem a execução local nem a avaliação arquitetural do desafio:
 
 - Evoluir a separação atual para projetos mais granulares de aplicação, domínio, contratos e infraestrutura específica quando o domínio crescer.
 - Evoluir autenticação por API Key local para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
@@ -198,7 +200,7 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 - Evoluir a política da Outbox para backoff exponencial, jitter e reprocessamento administrativo.
 - Definir estratégia de fila de erro dedicada.
 - Definir limites aceitáveis de atraso na consolidação.
-- Padronizar nomes de campos dos logs entre API, worker e infraestrutura.
+- Padronizar nomes de campos dos logs entre APIs, worker e infraestrutura.
 - Definir dashboards e alertas operacionais.
 - Criar health checks específicos para o worker de consolidação.
 

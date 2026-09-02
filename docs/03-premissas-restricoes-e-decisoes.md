@@ -37,18 +37,18 @@ As decisões abaixo consolidam escolhas já registradas ou implementadas no repo
 | DA-003 | Usar comunicação assíncrona entre lançamento e consolidação via RabbitMQ. | O processamento assíncrono favorece resiliência e desacoplamento entre os serviços. |
 | DA-004 | Persistir dados relacionais em PostgreSQL com EF Core Migrations. | Essa escolha facilita consistência relacional, evolução controlada do schema e execução local em container. |
 | DA-005 | Usar `Idempotency-Key` no `POST /entries`. | Essa decisão evita duplicidade acidental causada por retry do consumidor. |
-| DA-006 | Separar a solution em `Api`, `Worker`, `Core` e `Infrastructure`. | Essa organização evita dependência direta entre serviços executáveis e mantém a implementação proporcional ao desafio. |
+| DA-006 | Separar a solution em APIs, `Worker`, `Core` e `Infrastructure`. | Essa organização evita dependência direta entre serviços executáveis e mantém a implementação proporcional ao desafio. |
 | DA-007 | Proteger endpoints de negócio com API Key local. | Essa decisão adiciona uma barreira inicial de autenticação sem introduzir uma solução completa de identidade nesta etapa do desafio. |
 | DA-008 | Usar Redis como cache de leitura do saldo diário consolidado. | Essa decisão reduz leituras repetidas no PostgreSQL sem mudar a fonte da verdade da solução. |
 | DA-009 | Usar Outbox para publicação confiável de eventos. | Essa decisão reduz o risco de lançamento salvo sem evento publicado no RabbitMQ. |
 | DA-010 | Controlar retentativas da Outbox com limite e estado de falha. | Essa decisão evita retry sem controle e facilita diagnóstico operacional. |
-| DA-011 | Separar liveness e readiness da API. | Essa decisão diferencia processo vivo de aplicação pronta para operar com dependências críticas. |
-| DA-012 | Registrar logs HTTP estruturados na API. | Essa decisão melhora rastreabilidade por rota, status, duração e `correlationId`. |
-| DA-013 | Usar logs em JSON no console da API e do worker. | Essa decisão facilita coleta, filtro e correlação dos logs em execução containerizada. |
+| DA-011 | Separar liveness e readiness das APIs. | Essa decisão diferencia processo vivo de aplicação pronta para operar com dependências críticas. |
+| DA-012 | Registrar logs HTTP estruturados nas APIs. | Essa decisão melhora rastreabilidade por rota, status, duração e `correlationId`. |
+| DA-013 | Usar logs em JSON no console das APIs e do worker. | Essa decisão facilita coleta, filtro e correlação dos logs em execução containerizada. |
 
-## Pontos em Aberto
+## Evoluções Para Produção
 
-Os pontos abaixo permanecem como evolução planejada:
+Os pontos abaixo representam melhorias naturais para uma operação produtiva. Eles não são pendências para executar e avaliar a entrega local do desafio:
 
 - Evolução da autenticação local para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
 - Estratégia de autorização por escopo, perfil ou recurso.
@@ -58,10 +58,10 @@ Os pontos abaixo permanecem como evolução planejada:
 - Testes de integração com dependências reais em containers.
 - Testes de carga para endpoints críticos.
 
-## Riscos Iniciais
+## Riscos Mapeados
 
 | ID | Risco | Mitigação Inicial |
 | --- | --- | --- |
-| RI-001 | Perda de eventos ou falha no processamento da consolidação. | Prever mecanismo de reprocessamento e rastreabilidade dos lançamentos. |
+| RI-001 | Perda de eventos ou falha no processamento da consolidação. | Usar Outbox, fila, processamento idempotente e rastreabilidade dos lançamentos. |
 | RI-002 | Consulta de saldo apresentar informação desatualizada. | Deixar clara a possibilidade de consistência eventual quando houver processamento assíncrono. |
 | RI-003 | A solução ficar complexa demais para o objetivo do desafio. | Evoluir em etapas e justificar cada decisão arquitetural. |

@@ -363,7 +363,7 @@ Na implementação atual, esse evento é publicado no RabbitMQ com a seguinte co
 | Queue | `cash-flow.entry-created` |
 | Routing key | `entry.created` |
 
-A API também registra uma cópia local temporária do evento em arquivo JSON para manter o endpoint manual de processamento disponível durante o desenvolvimento.
+A API de lançamentos também pode registrar uma cópia local temporária do evento em arquivo JSON quando executada em modo de armazenamento em arquivo. Esse modo existe apenas para apoio de desenvolvimento sem PostgreSQL/RabbitMQ.
 
 ### Evento: EntryCreated
 
@@ -382,9 +382,9 @@ A API também registra uma cópia local temporária do evento em arquivo JSON pa
 }
 ```
 
-## Observações
+## Evoluções Para Produção
 
 - Os endpoints documentados representam os contratos atuais da implementação incremental.
-- A autenticação será detalhada em etapa posterior.
-- Paginação, filtros adicionais e ordenação serão avaliados conforme a evolução da solução.
+- A autenticação local por API Key deve evoluir para uma estratégia corporativa antes de produção.
+- Paginação, filtros adicionais e ordenação podem ser adicionados conforme o volume e os requisitos de consulta aumentarem.
 - A consistência eventual deve ser considerada na consulta do saldo consolidado.

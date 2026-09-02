@@ -6,7 +6,7 @@ Aceita
 
 ## Contexto
 
-A API já registra logs HTTP estruturados com método, rota, status, duração e `correlationId`. O worker também registra eventos consumidos e resultado do processamento.
+As APIs já registram logs HTTP estruturados com método, rota, status, duração e `correlationId`. O worker também registra eventos consumidos e resultado do processamento.
 
 Em execução local com Docker Compose, os logs são lidos principalmente pelo `docker compose logs`. Em ambientes produtivos, logs em console costumam ser coletados por plataformas de observabilidade.
 
@@ -14,7 +14,7 @@ Logs em texto livre são mais fáceis de ler manualmente, mas são piores para c
 
 ## Decisão
 
-Configurar API e worker para escrever logs no console em formato JSON usando o provider nativo do .NET.
+Configurar APIs e worker para escrever logs no console em formato JSON usando o provider nativo do .NET.
 
 Regras adotadas:
 
@@ -37,7 +37,7 @@ Regras adotadas:
 
 - A leitura manual dos logs fica menos amigável que texto simples.
 - Ainda não entrega métricas, tracing distribuído ou dashboards.
-- Requer padronização futura de nomes de campos entre API, worker e infraestrutura.
+- Requer padronização futura de nomes de campos entre APIs, worker e infraestrutura.
 
 ## Alternativas Consideradas
 

@@ -203,7 +203,7 @@ O relacionamento entre lançamentos e saldo diário é derivado pela data de ref
 | DailyBalanceProcessedEvent | id | Chave interna do banco. |
 | DailyBalanceProcessedEvent | eventUid | Garantia de idempotência no processamento de eventos. |
 
-## Observações
+## Evoluções Para Produção
 
 - O modelo pode evoluir para incluir comerciante, conta, categoria, status de processamento e auditoria.
-- A primeira versão mantém o modelo reduzido para focar no desafio principal: lançamento financeiro e consolidação diária.
+- A entrega mantém o modelo reduzido para focar no desafio principal: lançamento financeiro e consolidação diária.

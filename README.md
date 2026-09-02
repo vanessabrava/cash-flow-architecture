@@ -462,7 +462,7 @@ O endpoint `POST /entries` aceita o header opcional `Idempotency-Key`.
 - Com `Idempotency-Key`, repetir a mesma chave com o mesmo conteúdo retorna o lançamento já criado e não duplica o registro.
 - Reutilizar a mesma chave com conteúdo diferente retorna `409 Conflict`.
 
-Ao criar um lançamento, a API grava o evento `EntryCreated` na tabela `outbox_messages` no PostgreSQL. Uma rotina em segundo plano lê mensagens pendentes da Outbox e publica no RabbitMQ.
+Ao criar um lançamento, a API de lançamentos grava o evento `EntryCreated` na tabela `outbox_messages` no PostgreSQL. Uma rotina em segundo plano lê mensagens pendentes da Outbox e publica no RabbitMQ.
 
 Esse desenho reduz o risco de o lançamento ser salvo sem que o evento de consolidação seja publicado.
 
@@ -789,9 +789,9 @@ code .
 
 Isso faz o VS Code herdar o mesmo PATH do terminal. Outra alternativa é criar um atalho do comando `dotnet` em `/usr/local/bin`, apontando para a instalação real do SDK.
 
-## Próximas Etapas
+## Evoluções Para Produção
 
-As próximas entregas devem evoluir o repositório em partes pequenas e commitáveis, por exemplo:
+Os itens abaixo não são pendências para executar o desafio localmente. Eles indicam como a solução poderia evoluir em um ambiente produtivo:
 
 1. Evoluir a autenticação local por API Key para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
 2. Implementar autorização por escopo, perfil ou recurso.

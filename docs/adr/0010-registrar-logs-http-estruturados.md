@@ -17,7 +17,7 @@ Logs de entrada e saída ajudam a responder perguntas comuns durante suporte:
 
 ## Decisão
 
-Adicionar um middleware de observabilidade HTTP na API.
+Adicionar um middleware de observabilidade HTTP nas APIs.
 
 Esse middleware:
 
@@ -37,7 +37,7 @@ Esse middleware:
 
 ## Consequências Negativas
 
-- Aumenta o volume de logs gerado pela API.
+- Aumenta o volume de logs gerado pelas APIs.
 - Ainda não substitui tracing distribuído completo.
 - Ainda não define dashboards ou métricas agregadas.
 

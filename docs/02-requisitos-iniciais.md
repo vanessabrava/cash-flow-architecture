@@ -43,6 +43,8 @@ Um lançamento financeiro deve conter, no mínimo:
 - Descrição.
 - Data de criação do registro.
 
-## Observações
+## Cobertura da Implementação
 
-Os requisitos acima são atendidos parcialmente pela implementação atual. Pontos como autorização, fila de erro, política avançada de retry e observabilidade completa permanecem como evolução planejada.
+Os requisitos funcionais e não funcionais principais do desafio são cobertos pela implementação local e pela documentação arquitetural.
+
+Itens como autenticação corporativa, autorização por recurso, fila de erro dedicada, dashboards, tracing distribuído e testes de carga são tratados como evoluções para produção, não como pendências para a entrega do desafio.
