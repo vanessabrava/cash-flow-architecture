@@ -97,6 +97,7 @@ Esta visão lógica foi detalhada nos seguintes documentos:
 | Persistência | PostgreSQL | Banco relacional para lançamentos, saldos consolidados, eventos processados e idempotência. |
 | Cache | Redis | Cache temporário para consultas de saldo diário consolidado. |
 | Consulta local de dados | Adminer | Interface web local para inspecionar o PostgreSQL durante o desenvolvimento. |
+| Consulta local de cache | Redis Commander | Interface web local para inspecionar chaves, valores e TTLs do Redis durante o desenvolvimento. |
 | Mensageria | RabbitMQ | Canal de publicação de eventos como `EntryCreated`. |
 | Worker de consolidação | .NET Worker Service | Projeto `CashFlowArchitecture.Worker`, responsável por consumir eventos do RabbitMQ e atualizar o saldo diário consolidado. |
 | Migrations | EF Core Migrations | Criação e evolução controlada do schema do PostgreSQL. |

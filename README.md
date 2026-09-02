@@ -124,6 +124,7 @@ O arquivo `compose.yaml` prepara a aplicação e os serviços necessários para 
 - Adminer para consulta web do PostgreSQL local.
 - RabbitMQ 4 com painel de gerenciamento para mensageria.
 - Redis 8 para cache de consultas de saldo diário consolidado.
+- Redis Commander para consulta web das chaves do Redis local.
 - Serviço temporário de migrations para criar ou atualizar o schema do PostgreSQL.
 - Worker de consolidação para consumir eventos do RabbitMQ e atualizar o saldo diário.
 
@@ -241,6 +242,7 @@ API Swagger: http://localhost:5099/swagger
 PostgreSQL: localhost:5432
 Adminer: http://localhost:8080
 Redis: localhost:6379
+Redis Commander: http://localhost:8081
 RabbitMQ: localhost:5672
 RabbitMQ Management: http://localhost:15672
 ```
@@ -256,6 +258,7 @@ Credenciais locais padrão:
 | PostgreSQL | `cash_flow_user` | `cash_flow_password` |
 | RabbitMQ Management | `cash_flow_user` | `cash_flow_password` |
 | Redis | Não se aplica | `cash_flow_redis_password` |
+| Redis Commander | `cash_flow_user` | `cash_flow_password` |
 
 Chave local padrão da API:
 
@@ -425,6 +428,33 @@ O PostgreSQL continua sendo a fonte da verdade. O fluxo esperado é:
 5. Se o Redis estiver indisponível, a API continua consultando o PostgreSQL.
 
 O TTL inicial do cache é de 15 minutos. Ele existe como proteção operacional para evitar saldo antigo preso indefinidamente se houver falha entre PostgreSQL e Redis. A atualização principal do cache acontece na consolidação, não pela expiração.
+
+Para consultar o Redis pelo navegador, abra:
+
+```text
+http://localhost:8081
+```
+
+Use:
+
+| Campo | Valor |
+| --- | --- |
+| Username | `cash_flow_user` |
+| Password | `cash_flow_password` |
+
+Depois de acessar, procure chaves no formato:
+
+```text
+cash-flow:daily-balance:YYYY-MM-DD
+```
+
+Exemplo:
+
+```text
+cash-flow:daily-balance:2026-09-02
+```
+
+O Redis Commander é apenas uma ferramenta de desenvolvimento local. Ele não deve ser exposto em homologação, produção ou qualquer ambiente compartilhado sem controles adequados de rede, autenticação e autorização.
 
 Para validar a independência entre API e consolidação:
 

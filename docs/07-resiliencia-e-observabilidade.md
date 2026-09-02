@@ -159,10 +159,22 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 - Evoluir a separação atual para projetos mais granulares de aplicação, domínio, contratos e infraestrutura específica quando o domínio crescer.
 - Evoluir autenticação por API Key local para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
 - Definir autorização por escopo, perfil ou recurso.
-- Evoluir invalidação do cache após consolidação.
+- Evoluir retry e observabilidade da atualização de cache após consolidação.
 - Evoluir a publicação para padrão Outbox antes de produção.
 - Definir política de retentativas.
 - Definir estratégia de fila de erro.
 - Definir limites aceitáveis de atraso na consolidação.
 - Definir formato final dos logs estruturados.
 - Definir dashboards e alertas operacionais.
+
+## Ferramentas Locais de Diagnóstico
+
+As ferramentas abaixo existem apenas para desenvolvimento local:
+
+| Ferramenta | Uso |
+| --- | --- |
+| Adminer | Inspecionar tabelas e registros do PostgreSQL local. |
+| RabbitMQ Management | Inspecionar exchange, fila, mensagens e consumidores do RabbitMQ local. |
+| Redis Commander | Inspecionar chaves, valores e TTLs do Redis local. |
+
+Essas ferramentas não devem ser expostas em produção sem controles adequados de rede, autenticação, autorização e auditoria.
