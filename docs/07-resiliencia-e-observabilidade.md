@@ -84,6 +84,8 @@ Os logs devem permitir rastrear as principais operações da solução.
 
 A API possui um middleware de logs HTTP estruturados. Ele obtém ou gera o `correlationId` no início da requisição, grava esse valor no header de resposta `X-Correlation-Id`, usa o mesmo valor no `TraceIdentifier` e registra método HTTP, rota, status code e duração.
 
+API e worker escrevem logs no console em formato JSON, com timestamp em UTC e scopes habilitados. Logs verbosos de infraestrutura em nível `Information`, como comandos SQL do EF Core, são filtrados para reduzir ruído durante a execução local.
+
 Payloads, senhas, API Keys e dados sensíveis não devem ser registrados.
 
 | Operação | Informações Relevantes |
@@ -196,7 +198,7 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 - Evoluir a política da Outbox para backoff exponencial, jitter e reprocessamento administrativo.
 - Definir estratégia de fila de erro dedicada.
 - Definir limites aceitáveis de atraso na consolidação.
-- Evoluir logs para formato JSON padronizado.
+- Padronizar nomes de campos dos logs entre API, worker e infraestrutura.
 - Definir dashboards e alertas operacionais.
 - Criar health checks específicos para o worker de consolidação.
 

@@ -9,7 +9,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       Authentication__ApiKey: "${API_KEY:-cash_flow_local_api_key}"
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password};GSS Encryption Mode=Disable"
       ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:-cash_flow_redis_password},abortConnect=false"
       Redis__InstanceName: "cash-flow:"
       Outbox__BatchSize: "${OUTBOX_BATCH_SIZE:-20}"
@@ -40,7 +40,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password};GSS Encryption Mode=Disable"
       ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:-cash_flow_redis_password},abortConnect=false"
       Redis__InstanceName: "cash-flow:"
       Redis__DailyBalanceTtlMinutes: "${REDIS_DAILY_BALANCE_TTL_MINUTES:-15}"
@@ -69,7 +69,7 @@ services:
     container_name: cash-flow-migrations
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password};GSS Encryption Mode=Disable"
     depends_on:
       postgres:
         condition: service_healthy

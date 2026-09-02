@@ -34,7 +34,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   │   ├── 0007-usar-outbox-para-publicacao-confiavel-de-eventos.md
 │   │   ├── 0008-controlar-retentativas-da-outbox.md
 │   │   ├── 0009-separar-liveness-e-readiness.md
-│   │   └── 0010-registrar-logs-http-estruturados.md
+│   │   ├── 0010-registrar-logs-http-estruturados.md
+│   │   └── 0011-usar-json-console-logs.md
 │   ├── 01-contexto-e-objetivo.md
 │   ├── 02-requisitos-iniciais.md
 │   ├── 03-premissas-restricoes-e-decisoes.md
@@ -81,6 +82,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [ADR 0008 - Controlar retentativas da Outbox](docs/adr/0008-controlar-retentativas-da-outbox.md)
 - [ADR 0009 - Separar liveness e readiness](docs/adr/0009-separar-liveness-e-readiness.md)
 - [ADR 0010 - Registrar logs HTTP estruturados](docs/adr/0010-registrar-logs-http-estruturados.md)
+- [ADR 0011 - Usar JSON console logs](docs/adr/0011-usar-json-console-logs.md)
 
 ## Idioma do Projeto
 
@@ -304,7 +306,7 @@ O campo `System` precisa estar como `PostgreSQL`. Se ele ficar como `MySQL / Mar
 Connection string para a API executando fora do Docker, por exemplo via terminal ou F5 no VS Code:
 
 ```text
-Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password
+Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password;GSS Encryption Mode=Disable
 ```
 
 Connection string do Redis para a API executando fora do Docker:
@@ -316,8 +318,10 @@ localhost:6379,password=cash_flow_redis_password,abortConnect=false
 Connection string para um serviço executando dentro da mesma rede do Docker Compose:
 
 ```text
-Host=postgres;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password
+Host=postgres;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password;GSS Encryption Mode=Disable
 ```
+
+A opção `GSS Encryption Mode=Disable` evita que o driver PostgreSQL tente usar GSS/Kerberos no ambiente local em container. Isso remove mensagens nativas desnecessárias sobre `libgssapi_krb5.so.2` nos logs.
 
 Connection string do Redis para um serviço executando dentro da mesma rede do Docker Compose:
 
@@ -376,7 +380,7 @@ O endpoint `GET /health/ready` indica se a API está pronta para operar:
 
 Se uma dependência crítica falhar, o readiness retorna `503 Service Unavailable`. Se apenas dependências não críticas falharem, retorna `200 OK` com status `Degraded`.
 
-A API registra logs HTTP estruturados com método, rota, status code, duração e `correlationId`. Os logs não devem registrar payloads, senhas ou API Keys.
+A API registra logs HTTP estruturados com método, rota, status code, duração e `correlationId`. API e worker escrevem logs no console em formato JSON, com timestamp em UTC. Os logs não devem registrar payloads, senhas ou API Keys.
 
 Documentação navegável da API em ambiente de desenvolvimento:
 
@@ -628,7 +632,7 @@ Arquivo `.vscode/launch.json`:
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:5099",
         "Authentication__ApiKey": "cash_flow_local_api_key",
-        "ConnectionStrings__Postgres": "Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password",
+        "ConnectionStrings__Postgres": "Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password;GSS Encryption Mode=Disable",
         "ConnectionStrings__Redis": "localhost:6379,password=cash_flow_redis_password,abortConnect=false",
         "Redis__InstanceName": "cash-flow:",
         "Redis__DailyBalanceTtlMinutes": "15",
@@ -694,4 +698,4 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 3. Evoluir a Outbox para backoff exponencial, fila de erro dedicada e reprocessamento administrativo.
 4. Evoluir retry e observabilidade da atualização de cache após consolidação.
 5. Criar testes de integração com PostgreSQL, RabbitMQ e Redis em containers.
-6. Detalhar observabilidade com logs JSON, métricas, tracing e dashboards.
+6. Detalhar observabilidade com métricas, tracing e dashboards.
