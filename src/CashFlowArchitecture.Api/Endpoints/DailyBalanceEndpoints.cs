@@ -1,6 +1,7 @@
 using CashFlowArchitecture.Api.Common;
 using CashFlowArchitecture.Api.Contracts.DailyBalances;
-using CashFlowArchitecture.Api.Infrastructure;
+using CashFlowArchitecture.Core.Abstractions;
+using CashFlowArchitecture.Infrastructure;
 
 namespace CashFlowArchitecture.Api.Endpoints;
 

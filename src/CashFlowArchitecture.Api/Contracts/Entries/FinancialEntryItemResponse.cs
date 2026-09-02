@@ -1,4 +1,4 @@
-using CashFlowArchitecture.Api.Domain.Entries;
+using CashFlowArchitecture.Core.Domain.Entries;
 
 namespace CashFlowArchitecture.Api.Contracts.Entries;
 

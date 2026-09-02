@@ -29,7 +29,7 @@ services:
   consolidation-worker:
     build:
       context: .
-      dockerfile: src/CashFlowArchitecture.Api/Dockerfile
+      dockerfile: src/CashFlowArchitecture.Worker/Dockerfile
       target: runtime
     container_name: cash-flow-consolidation-worker
     environment:
@@ -43,7 +43,6 @@ services:
       RabbitMq__Exchange: ${RABBITMQ_EXCHANGE:-cash-flow.events}
       RabbitMq__Queue: ${RABBITMQ_ENTRY_CREATED_QUEUE:-cash-flow.entry-created}
       RabbitMq__RoutingKey: ${RABBITMQ_ENTRY_CREATED_ROUTING_KEY:-entry.created}
-      ConsolidationWorker__Enabled: true
     depends_on:
       postgres:
         condition: service_healthy

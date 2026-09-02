@@ -82,10 +82,25 @@ Esta visão lógica será refinada nas próximas etapas com:
 
 | Componente | Tecnologia | Observação |
 | --- | --- | --- |
-| API | .NET com C# | Implementação dos contratos HTTP e regras de aplicação. |
+| API | .NET com C# | Projeto `CashFlowArchitecture.Api`, responsável pelos contratos HTTP e regras de entrada. |
 | Persistência | PostgreSQL | Banco relacional planejado para lançamentos e saldos consolidados. |
 | Consulta local de dados | Adminer | Interface web local para inspecionar o PostgreSQL durante o desenvolvimento. |
 | Mensageria | RabbitMQ | Canal de publicação de eventos como `EntryCreated`. |
-| Worker de consolidação | .NET BackgroundService | Consome eventos do RabbitMQ e atualiza o saldo diário consolidado. |
+| Worker de consolidação | .NET Worker Service | Projeto `CashFlowArchitecture.Worker`, responsável por consumir eventos do RabbitMQ e atualizar o saldo diário consolidado. |
 | Migrations | EF Core Migrations | Criação e evolução controlada do schema do PostgreSQL. |
 | Execução local | Docker Compose | Facilita subir a API e suas dependências no ambiente de desenvolvimento. |
+
+## Organização da Solution
+
+A implementação foi organizada em projetos separados por responsabilidade:
+
+| Projeto | Papel na solução |
+| --- | --- |
+| `CashFlowArchitecture.Api` | Host HTTP da aplicação, endpoints, Swagger e contratos de entrada/saída. |
+| `CashFlowArchitecture.Worker` | Host do processamento assíncrono de consolidação. |
+| `CashFlowArchitecture.Core` | Domínio e abstrações compartilhadas, sem dependência de tecnologia externa. |
+| `CashFlowArchitecture.Infrastructure` | Implementações de banco de dados, migrations, mensageria e armazenamento local de apoio. |
+
+Essa separação evita que o worker dependa diretamente da API e deixa mais claro que os dois serviços executáveis podem subir, parar e escalar separadamente.
+
+A decisão está registrada na [ADR 0004](adr/0004-modularizar-api-worker-core-e-infrastructure.md).

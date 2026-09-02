@@ -26,7 +26,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   ├── adr
 │   │   ├── 0001-separar-lancamentos-e-consolidacao.md
 │   │   ├── 0002-processar-consolidacao-de-forma-assincrona.md
-│   │   └── 0003-usar-idempotency-key-na-criacao-de-lancamentos.md
+│   │   ├── 0003-usar-idempotency-key-na-criacao-de-lancamentos.md
+│   │   └── 0004-modularizar-api-worker-core-e-infrastructure.md
 │   ├── 01-contexto-e-objetivo.md
 │   ├── 02-requisitos-iniciais.md
 │   ├── 03-premissas-restricoes-e-decisoes.md
@@ -36,8 +37,16 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   ├── 07-resiliencia-e-observabilidade.md
 │   └── 08-estrategia-de-testes.md
 ├── src
-│   └── CashFlowArchitecture.Api
-│       ├── CashFlowArchitecture.Api.csproj
+│   ├── CashFlowArchitecture.Api
+│   │   ├── CashFlowArchitecture.Api.csproj
+│   │   └── Program.cs
+│   ├── CashFlowArchitecture.Core
+│   │   └── CashFlowArchitecture.Core.csproj
+│   ├── CashFlowArchitecture.Infrastructure
+│   │   └── CashFlowArchitecture.Infrastructure.csproj
+│   └── CashFlowArchitecture.Worker
+│       ├── CashFlowArchitecture.Worker.csproj
+│       ├── Dockerfile
 │       └── Program.cs
 └── tests
     └── CashFlowArchitecture.Api.Tests
@@ -58,6 +67,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [ADR 0001 - Separar lançamentos e consolidação](docs/adr/0001-separar-lancamentos-e-consolidacao.md)
 - [ADR 0002 - Processar consolidação de forma assíncrona](docs/adr/0002-processar-consolidacao-de-forma-assincrona.md)
 - [ADR 0003 - Usar Idempotency-Key na criação de lançamentos](docs/adr/0003-usar-idempotency-key-na-criacao-de-lancamentos.md)
+- [ADR 0004 - Modularizar API, Worker, Core e Infrastructure](docs/adr/0004-modularizar-api-worker-core-e-infrastructure.md)
 
 ## Idioma do Projeto
 
@@ -111,7 +121,7 @@ O arquivo `compose.yaml` prepara a aplicação e os serviços planejados para a 
 - Serviço temporário de migrations para criar ou atualizar o schema do PostgreSQL.
 - Worker de consolidação para consumir eventos do RabbitMQ e atualizar o saldo diário.
 
-#### Opção 1: executar infraestrutura no Docker e API pelo terminal ou F5
+#### Opção 1: executar infraestrutura no Docker e serviços pelo terminal ou F5
 
 Use esta opção quando quiser depurar a API pelo Visual Studio Code.
 
@@ -159,6 +169,14 @@ Depois acesse:
 Swagger: http://localhost:5099/swagger
 ```
 
+Passo 6: executar o worker de consolidação em outro terminal, se quiser validar a consolidação automática fora do Docker Compose completo.
+
+```bash
+dotnet run --project src/CashFlowArchitecture.Worker/CashFlowArchitecture.Worker.csproj
+```
+
+Sem o worker em execução, a API continua cadastrando lançamentos e publicando eventos no RabbitMQ, mas o saldo pode permanecer `PENDING` até o processamento acontecer.
+
 #### Opção 2: executar tudo pelo Docker Compose
 
 Use esta opção quando quiser subir a aplicação inteira sem usar F5.
@@ -180,15 +198,16 @@ docker compose up -d --build
 Esse comando executa o fluxo completo:
 
 1. Constrói a imagem da API.
-2. Constrói a imagem do serviço de migrations.
-3. Sobe o PostgreSQL.
-4. Aguarda o PostgreSQL ficar saudável.
-5. Executa o container temporário `cash-flow-migrations`.
-6. Aplica as migrations do EF Core no banco `cash_flow`.
-7. Sobe o RabbitMQ.
-8. Sobe o Adminer.
-9. Sobe a API em container.
-10. Sobe o worker de consolidação em container separado.
+2. Constrói a imagem do worker de consolidação.
+3. Constrói a imagem do serviço de migrations.
+4. Sobe o PostgreSQL.
+5. Aguarda o PostgreSQL ficar saudável.
+6. Executa o container temporário `cash-flow-migrations`.
+7. Aplica as migrations do EF Core no banco `cash_flow`.
+8. Sobe o RabbitMQ.
+9. Sobe o Adminer.
+10. Sobe a API em container.
+11. Sobe o worker de consolidação em container separado.
 
 O Docker Compose pode iniciar alguns serviços independentes em paralelo. As dependências importantes ficam controladas no compose:
 

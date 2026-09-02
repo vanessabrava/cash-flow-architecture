@@ -1,14 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Worker">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>CashFlowArchitecture.Api</RootNamespace>
+    <RootNamespace>CashFlowArchitecture.Worker</RootNamespace>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../CashFlowArchitecture.Core/CashFlowArchitecture.Core.csproj" />

@@ -1,6 +1,9 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj" />
+    <Project Path="src/CashFlowArchitecture.Core/CashFlowArchitecture.Core.csproj" />
+    <Project Path="src/CashFlowArchitecture.Infrastructure/CashFlowArchitecture.Infrastructure.csproj" />
+    <Project Path="src/CashFlowArchitecture.Worker/CashFlowArchitecture.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CashFlowArchitecture.Api.Tests/CashFlowArchitecture.Api.Tests.csproj" />

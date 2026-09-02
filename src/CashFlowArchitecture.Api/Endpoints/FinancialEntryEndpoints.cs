@@ -1,9 +1,9 @@
 using CashFlowArchitecture.Api.Common;
 using CashFlowArchitecture.Api.Contracts;
 using CashFlowArchitecture.Api.Contracts.Entries;
-using CashFlowArchitecture.Api.Domain.Entries;
-using CashFlowArchitecture.Api.Domain.Events;
-using CashFlowArchitecture.Api.Infrastructure;
+using CashFlowArchitecture.Core.Domain.Entries;
+using CashFlowArchitecture.Core.Domain.Events;
+using CashFlowArchitecture.Core.Abstractions;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;

@@ -134,7 +134,7 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 
 ## Pontos Para Evolução
 
-- Separar o worker em um projeto .NET próprio dentro da solution.
+- Evoluir a separação atual para projetos mais granulares de aplicação, domínio, contratos e infraestrutura específica quando o domínio crescer.
 - Evoluir a publicação para padrão Outbox antes de produção.
 - Definir política de retentativas.
 - Definir estratégia de fila de erro.

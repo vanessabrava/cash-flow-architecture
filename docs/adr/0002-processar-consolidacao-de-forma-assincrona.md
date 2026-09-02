@@ -22,7 +22,7 @@ Nesta etapa da implementação, a API publica eventos `EntryCreated` no RabbitMQ
 - fila `cash-flow.entry-created`;
 - routing key `entry.created`.
 
-O worker `cash-flow-consolidation-worker` consome a fila `cash-flow.entry-created` e atualiza o saldo diário consolidado no PostgreSQL.
+O worker `cash-flow-consolidation-worker` roda a partir do projeto `CashFlowArchitecture.Worker`, consome a fila `cash-flow.entry-created` e atualiza o saldo diário consolidado no PostgreSQL.
 
 A API mantém uma cópia local temporária dos eventos para permitir o processamento manual pelo endpoint `POST /daily-balances/process-events` durante a evolução do desafio.
 

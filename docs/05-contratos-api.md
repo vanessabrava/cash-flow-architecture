@@ -1,6 +1,6 @@
 # Contratos de API
 
-Este documento descreve uma proposta inicial de contratos HTTP para as capacidades principais da solução. Os contratos ainda não representam uma implementação, mas servem como referência para a arquitetura e para a futura criação do código.
+Este documento descreve os contratos HTTP definidos para as capacidades principais da solução. Parte desses contratos já está implementada na API e parte serve como referência para evolução do desafio.
 
 ## Convenções
 

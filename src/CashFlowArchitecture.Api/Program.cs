@@ -1,7 +1,10 @@
 using CashFlowArchitecture.Api.Endpoints;
-using CashFlowArchitecture.Api.Domain.Entries;
-using CashFlowArchitecture.Api.Infrastructure;
-using CashFlowArchitecture.Api.Infrastructure.Persistence;
+using CashFlowArchitecture.Core.Abstractions;
+using CashFlowArchitecture.Core.Domain.Entries;
+using CashFlowArchitecture.Infrastructure;
+using CashFlowArchitecture.Infrastructure.Messaging;
+using CashFlowArchitecture.Infrastructure.Persistence;
+using CashFlowArchitecture.Infrastructure.Storage;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
@@ -37,11 +40,6 @@ else
 }
 
 builder.Services.AddScoped<DailyBalanceConsolidationProcessor>();
-if (builder.Configuration.GetValue("ConsolidationWorker:Enabled", false))
-{
-    builder.Services.AddHostedService<RabbitMqDailyBalanceWorker>();
-}
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
