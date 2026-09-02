@@ -21,6 +21,7 @@ if (builder.Environment.IsEnvironment("Testing")
 {
     builder.Services.AddSingleton<IFinancialEntryStore, FileFinancialEntryStore>();
     builder.Services.AddSingleton<IDailyBalanceStore, FileDailyBalanceStore>();
+    builder.Services.AddSingleton<IIdempotencyStore, FileIdempotencyStore>();
 }
 else
 {
@@ -28,6 +29,7 @@ else
         options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
     builder.Services.AddScoped<IFinancialEntryStore, PostgresFinancialEntryStore>();
     builder.Services.AddScoped<IDailyBalanceStore, PostgresDailyBalanceStore>();
+    builder.Services.AddScoped<IIdempotencyStore, PostgresIdempotencyStore>();
 }
 
 builder.Services.AddScoped<DailyBalanceConsolidationProcessor>();

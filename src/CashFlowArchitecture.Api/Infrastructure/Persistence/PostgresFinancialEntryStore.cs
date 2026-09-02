@@ -33,4 +33,18 @@ internal sealed class PostgresFinancialEntryStore(CashFlowDbContext dbContext) :
                 entry.CreatedAt))
             .ToArray();
     }
+
+    public FinancialEntry? GetByUid(Guid uid)
+    {
+        return dbContext.FinancialEntries
+            .Where(entry => entry.Uid == uid)
+            .Select(entry => new FinancialEntry(
+                entry.Uid,
+                entry.Type,
+                entry.Amount,
+                entry.Description,
+                entry.EntryDate,
+                entry.CreatedAt))
+            .SingleOrDefault();
+    }
 }

@@ -308,7 +308,14 @@ Nesta implementação, os lançamentos financeiros e os saldos consolidados são
 financial_entries
 daily_balances
 daily_balance_processed_events
+idempotency_records
 ```
+
+O endpoint `POST /entries` aceita o header opcional `Idempotency-Key`.
+
+- Sem `Idempotency-Key`, cada chamada cria um novo lançamento.
+- Com `Idempotency-Key`, repetir a mesma chave com o mesmo conteúdo retorna o lançamento já criado e não duplica o registro.
+- Reutilizar a mesma chave com conteúdo diferente retorna `409 Conflict`.
 
 Ao criar um lançamento, a API ainda registra um evento local `EntryCreated` em arquivo JSON:
 

@@ -9,6 +9,8 @@ internal sealed class CashFlowDbContext(DbContextOptions<CashFlowDbContext> opti
 
     public DbSet<DailyBalanceEntity> DailyBalances => Set<DailyBalanceEntity>();
 
+    public DbSet<IdempotencyRecordEntity> IdempotencyRecords => Set<IdempotencyRecordEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<FinancialEntryEntity>(entry =>
@@ -61,6 +63,23 @@ internal sealed class CashFlowDbContext(DbContextOptions<CashFlowDbContext> opti
                 .HasForeignKey(entity => entity.DailyBalanceId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        modelBuilder.Entity<IdempotencyRecordEntity>(record =>
+        {
+            record.ToTable("idempotency_records");
+            record.HasKey(entity => entity.Id);
+            record.HasIndex(entity => new { entity.Operation, entity.Key }).IsUnique();
+            record.HasIndex(entity => entity.ResourceUid);
+            record.HasIndex(entity => entity.ExpiresAt);
+
+            record.Property(entity => entity.Id).HasColumnName("id");
+            record.Property(entity => entity.Operation).HasColumnName("operation").HasMaxLength(100).IsRequired();
+            record.Property(entity => entity.Key).HasColumnName("key").HasMaxLength(200).IsRequired();
+            record.Property(entity => entity.RequestHash).HasColumnName("request_hash").HasMaxLength(128).IsRequired();
+            record.Property(entity => entity.ResourceUid).HasColumnName("resource_uid").IsRequired();
+            record.Property(entity => entity.CreatedAt).HasColumnName("created_at").IsRequired();
+            record.Property(entity => entity.ExpiresAt).HasColumnName("expires_at").IsRequired();
+        });
     }
 }
 
@@ -109,4 +128,21 @@ internal sealed class DailyBalanceProcessedEventEntity
     public Guid EventUid { get; set; }
 
     public DailyBalanceEntity DailyBalance { get; set; } = null!;
+}
+
+internal sealed class IdempotencyRecordEntity
+{
+    public long Id { get; set; }
+
+    public string Operation { get; set; } = string.Empty;
+
+    public string Key { get; set; } = string.Empty;
+
+    public string RequestHash { get; set; } = string.Empty;
+
+    public Guid ResourceUid { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset ExpiresAt { get; set; }
 }

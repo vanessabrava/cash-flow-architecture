@@ -4,11 +4,17 @@ using CashFlowArchitecture.Api.Contracts.Entries;
 using CashFlowArchitecture.Api.Domain.Entries;
 using CashFlowArchitecture.Api.Domain.Events;
 using CashFlowArchitecture.Api.Infrastructure;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace CashFlowArchitecture.Api.Endpoints;
 
 internal static class FinancialEntryEndpoints
 {
+    private const string CreateEntryOperation = "POST /entries";
+    private const string IdempotencyKeyHeaderName = "Idempotency-Key";
+
     public static void MapFinancialEntryEndpoints(this WebApplication app)
     {
         var entries = app.MapGroup("/entries");
@@ -28,10 +34,12 @@ internal static class FinancialEntryEndpoints
         CreateFinancialEntryRequest request,
         HttpContext httpContext,
         IFinancialEntryStore store,
+        IIdempotencyStore idempotencyStore,
         FileIntegrationEventStore eventStore)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
         var validationErrors = Validate(request);
+        var idempotencyKey = GetIdempotencyKey(httpContext);
 
         if (validationErrors.Count > 0)
         {
@@ -40,6 +48,41 @@ internal static class FinancialEntryEndpoints
                 "VALIDATION_ERROR",
                 "A requisicao possui campos invalidos.",
                 validationErrors));
+        }
+
+        if (idempotencyKey is { Length: > 200 })
+        {
+            return Results.BadRequest(new ErrorResponse(
+                correlationId,
+                "VALIDATION_ERROR",
+                "A requisicao possui campos invalidos.",
+                [new ErrorDetail(IdempotencyKeyHeaderName, "A chave de idempotencia deve ter no maximo 200 caracteres.")]));
+        }
+
+        var requestHash = ComputeRequestHash(request);
+
+        if (idempotencyKey is not null)
+        {
+            var existingRecord = idempotencyStore.Get(CreateEntryOperation, idempotencyKey);
+
+            if (existingRecord is not null)
+            {
+                if (existingRecord.RequestHash != requestHash)
+                {
+                    return Results.Conflict(new ErrorResponse(
+                        correlationId,
+                        "IDEMPOTENCY_KEY_CONFLICT",
+                        "A Idempotency-Key informada ja foi usada com outro conteudo.",
+                        [new ErrorDetail(IdempotencyKeyHeaderName, "Use uma nova chave para uma nova tentativa logica de criacao.")]));
+                }
+
+                var existingEntry = store.GetByUid(existingRecord.ResourceUid);
+
+                if (existingEntry is not null)
+                {
+                    return Results.Ok(ToResponse(correlationId, existingEntry));
+                }
+            }
         }
 
         var entry = new FinancialEntry(
@@ -53,16 +96,18 @@ internal static class FinancialEntryEndpoints
         store.Add(entry);
         eventStore.Add(EntryCreatedEvent.From(entry, correlationId));
 
-        var response = new FinancialEntryResponse(
-            correlationId,
-            entry.Uid,
-            entry.Type,
-            entry.Amount,
-            entry.Description,
-            entry.EntryDate,
-            entry.CreatedAt);
+        if (idempotencyKey is not null)
+        {
+            idempotencyStore.Add(new IdempotencyRecord(
+                CreateEntryOperation,
+                idempotencyKey,
+                requestHash,
+                entry.Uid,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow.AddHours(24)));
+        }
 
-        return Results.Created($"/entries/{entry.Uid}", response);
+        return Results.Created($"/entries/{entry.Uid}", ToResponse(correlationId, entry));
     }
 
     private static IResult GetByDate(
@@ -104,5 +149,39 @@ internal static class FinancialEntryEndpoints
         }
 
         return errors;
+    }
+
+    private static string? GetIdempotencyKey(HttpContext httpContext)
+    {
+        var headerValue = httpContext.Request.Headers[IdempotencyKeyHeaderName].FirstOrDefault();
+
+        return string.IsNullOrWhiteSpace(headerValue)
+            ? null
+            : headerValue.Trim();
+    }
+
+    private static string ComputeRequestHash(CreateFinancialEntryRequest request)
+    {
+        var normalizedRequest = string.Join(
+            '|',
+            request.Type.ToString(),
+            request.Amount.ToString("0.00", CultureInfo.InvariantCulture),
+            request.Description.Trim(),
+            request.EntryDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedRequest));
+
+        return Convert.ToHexString(bytes);
+    }
+
+    private static FinancialEntryResponse ToResponse(string correlationId, FinancialEntry entry)
+    {
+        return new FinancialEntryResponse(
+            correlationId,
+            entry.Uid,
+            entry.Type,
+            entry.Amount,
+            entry.Description,
+            entry.EntryDate,
+            entry.CreatedAt);
     }
 }

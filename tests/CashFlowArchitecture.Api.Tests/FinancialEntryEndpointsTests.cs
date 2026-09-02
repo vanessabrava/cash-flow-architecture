@@ -19,6 +19,9 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
     private readonly string dailyBalancesFilePath = Path.Combine(
         Path.GetTempPath(),
         $"cash-flow-balances-{Guid.NewGuid()}.json");
+    private readonly string idempotencyRecordsFilePath = Path.Combine(
+        Path.GetTempPath(),
+        $"cash-flow-idempotency-{Guid.NewGuid()}.json");
     private readonly HttpClient client;
 
     public FinancialEntryEndpointsTests()
@@ -34,7 +37,8 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
                         ["Storage:UseFileStorage"] = "true",
                         ["Storage:FinancialEntriesPath"] = entriesFilePath,
                         ["Storage:IntegrationEventsPath"] = integrationEventsFilePath,
-                        ["Storage:DailyBalancesPath"] = dailyBalancesFilePath
+                        ["Storage:DailyBalancesPath"] = dailyBalancesFilePath,
+                        ["Storage:IdempotencyRecordsPath"] = idempotencyRecordsFilePath
                     });
                 });
             });
@@ -69,6 +73,83 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         Assert.Equal("Venda no cartao", body.RootElement.GetProperty("description").GetString());
         Assert.Equal("2026-09-01", body.RootElement.GetProperty("entryDate").GetString());
         Assert.False(body.RootElement.TryGetProperty("id", out _));
+    }
+
+    [Fact]
+    public async Task CreateEntry_ReturnsSameEntryWhenIdempotencyKeyIsReused()
+    {
+        var payload = new
+        {
+            type = "CREDIT",
+            amount = 150.75m,
+            description = "Venda no cartao",
+            entryDate = "2026-09-01"
+        };
+
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/entries")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        firstRequest.Headers.Add("Idempotency-Key", "entry-create-key-123");
+
+        using var secondRequest = new HttpRequestMessage(HttpMethod.Post, "/entries")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        secondRequest.Headers.Add("Idempotency-Key", "entry-create-key-123");
+
+        using var firstResponse = await client.SendAsync(firstRequest);
+        using var firstBody = await JsonDocument.ParseAsync(await firstResponse.Content.ReadAsStreamAsync());
+        using var secondResponse = await client.SendAsync(secondRequest);
+        using var secondBody = await JsonDocument.ParseAsync(await secondResponse.Content.ReadAsStreamAsync());
+        using var entriesResponse = await client.GetAsync("/entries?date=2026-09-01");
+        using var entriesBody = await JsonDocument.ParseAsync(await entriesResponse.Content.ReadAsStreamAsync());
+        using var eventsFile = File.OpenRead(integrationEventsFilePath);
+        using var events = await JsonDocument.ParseAsync(eventsFile);
+
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        Assert.Equal(
+            firstBody.RootElement.GetProperty("uid").GetString(),
+            secondBody.RootElement.GetProperty("uid").GetString());
+        Assert.Single(entriesBody.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Single(events.RootElement.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task CreateEntry_ReturnsConflictWhenIdempotencyKeyIsReusedWithDifferentPayload()
+    {
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/entries")
+        {
+            Content = JsonContent.Create(new
+            {
+                type = "CREDIT",
+                amount = 150.75m,
+                description = "Venda no cartao",
+                entryDate = "2026-09-01"
+            })
+        };
+        firstRequest.Headers.Add("Idempotency-Key", "entry-create-conflict-key-123");
+
+        using var secondRequest = new HttpRequestMessage(HttpMethod.Post, "/entries")
+        {
+            Content = JsonContent.Create(new
+            {
+                type = "CREDIT",
+                amount = 200.00m,
+                description = "Venda no cartao",
+                entryDate = "2026-09-01"
+            })
+        };
+        secondRequest.Headers.Add("Idempotency-Key", "entry-create-conflict-key-123");
+
+        using var firstResponse = await client.SendAsync(firstRequest);
+        using var secondResponse = await client.SendAsync(secondRequest);
+        using var secondBody = await JsonDocument.ParseAsync(await secondResponse.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
+        Assert.Equal("IDEMPOTENCY_KEY_CONFLICT", secondBody.RootElement.GetProperty("code").GetString());
     }
 
     [Fact]
@@ -263,6 +344,11 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         if (File.Exists(dailyBalancesFilePath))
         {
             File.Delete(dailyBalancesFilePath);
+        }
+
+        if (File.Exists(idempotencyRecordsFilePath))
+        {
+            File.Delete(idempotencyRecordsFilePath);
         }
     }
 

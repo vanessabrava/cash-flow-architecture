@@ -56,6 +56,13 @@ Idempotency-Key: 8d7f7d9c-6b3b-4a0c-8f7a-123456789abc
 
 Quando `Idempotency-Key` não for informado, cada requisição `POST /entries` deve ser tratada como uma nova criação.
 
+Quando `Idempotency-Key` for informado:
+
+- a primeira requisição válida retorna `201 Created`;
+- a repetição da mesma chave com o mesmo conteúdo retorna `200 OK` com o mesmo lançamento já criado;
+- a repetição da mesma chave com conteúdo diferente retorna `409 Conflict`;
+- a repetição da mesma chave não deve criar novo lançamento nem novo evento de integração.
+
 #### Requisição
 
 ```json
@@ -91,6 +98,34 @@ Quando `Idempotency-Key` não for informado, cada requisição `POST /entries` d
   "description": "Venda no cartão",
   "entryDate": "2026-09-01",
   "createdAt": "2026-09-01T10:15:30Z"
+}
+```
+
+#### Resposta em Replay Idempotente
+
+```http
+200 OK
+```
+
+Retorna o mesmo contrato da criação, preservando o `uid` do lançamento criado na primeira chamada.
+
+#### Resposta de Conflito de Idempotência
+
+```http
+409 Conflict
+```
+
+```json
+{
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
+  "code": "IDEMPOTENCY_KEY_CONFLICT",
+  "message": "A Idempotency-Key informada já foi usada com outro conteúdo.",
+  "details": [
+    {
+      "field": "Idempotency-Key",
+      "message": "Use uma nova chave para uma nova tentativa lógica de criação."
+    }
+  ]
 }
 ```
 

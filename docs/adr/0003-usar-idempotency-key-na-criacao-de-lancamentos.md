@@ -27,9 +27,10 @@ Quando o consumidor enviar uma `Idempotency-Key`, a API deve tratar a combinaç�
 Regras esperadas:
 
 - Se a chave ainda não tiver sido usada, a API cria o lançamento normalmente.
-- Se a mesma chave for enviada novamente para a mesma operação, a API retorna o lançamento já criado.
+- Se a mesma chave for enviada novamente para a mesma operação e com o mesmo conteúdo, a API retorna o lançamento já criado com `200 OK`.
+- Se a mesma chave for enviada novamente para a mesma operação com conteúdo diferente, a API retorna `409 Conflict`.
 - A repetição da mesma chave não deve criar novo lançamento.
-- A chave deve ter validade operacional limitada, a ser definida na implementação final.
+- A chave deve ter validade operacional limitada. Nesta implementação, a retenção inicial é de 24 horas.
 - A ausência do header mantém o comportamento padrão: cada `POST /entries` representa uma nova tentativa de criação.
 
 Essa decisão não substitui a idempotência da consolidação. São controles diferentes:
@@ -49,7 +50,7 @@ Essa decisão não substitui a idempotência da consolidação. São controles d
 - Exige persistir o histórico das chaves de idempotência.
 - Exige política de retenção para não manter chaves indefinidamente.
 - Exige cuidado para não reutilizar a mesma chave em operações diferentes.
-- A implementação precisa definir o comportamento quando a mesma chave for reutilizada com payload diferente.
+- Exige cuidado transacional na evolução da solução para garantir que lançamento, registro de idempotência e publicação do evento sejam confirmados de forma consistente.
 
 ## Alternativas Consideradas
 

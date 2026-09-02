@@ -46,6 +46,14 @@ internal sealed class FileFinancialEntryStore : IFinancialEntryStore
         }
     }
 
+    public FinancialEntry? GetByUid(Guid uid)
+    {
+        lock (syncRoot)
+        {
+            return ReadAll().SingleOrDefault(entry => entry.Uid == uid);
+        }
+    }
+
     private List<FinancialEntry> ReadAll()
     {
         if (!File.Exists(filePath))
