@@ -76,6 +76,7 @@ Testes de integração devem validar a comunicação entre componentes.
 | API de Lançamentos e canal de eventos | Publicar evento após criação de lançamento. |
 | API de Lançamentos e Outbox | Gravar mensagem de Outbox junto com o lançamento. |
 | Publicador de Outbox e RabbitMQ | Publicar mensagens pendentes e marcar `processedAt`. |
+| Retentativas da Outbox | Agendar `nextAttemptAt` após falha e preencher `failedAt` ao atingir o limite de tentativas. |
 | Processador de Consolidação e canal de eventos | Consumir evento e atualizar saldo da data. |
 | Processador de Consolidação e base de saldos | Persistir totais de crédito, débito e saldo final. |
 | API de Consulta de Saldo e Redis | Armazenar e recuperar saldo consolidado em cache. |
@@ -90,6 +91,7 @@ Testes de resiliência devem validar o comportamento da solução em falhas prev
 | --- | --- |
 | Consolidação indisponível | API de Lançamentos continua registrando novos lançamentos. |
 | RabbitMQ indisponível durante criação | API registra o lançamento e mantém evento pendente na Outbox. |
+| Falha repetida na publicação da Outbox | Mensagem deixa de ser republicada automaticamente após atingir o limite de tentativas. |
 | Retry duplicado no `POST /entries` | API retorna o lançamento já criado sem duplicar o registro quando `Idempotency-Key` é repetida. |
 | Evento processado mais de uma vez | Saldo consolidado não é duplicado. |
 | Redis indisponível | API continua consultando saldo no PostgreSQL. |
@@ -135,5 +137,5 @@ Testes end-to-end devem cobrir apenas jornadas essenciais.
 - Adicionar testes de integração para Outbox com PostgreSQL e RabbitMQ reais.
 - Definir cobertura mínima esperada para aprovação de Pull Request.
 - Adicionar testes automatizados específicos para o worker de consolidação.
-- Validar comportamento de retentativa e fila de erro quando essa estratégia for implementada.
+- Validar fila de erro dedicada quando essa estratégia for implementada.
 - Definir testes de carga para endpoints críticos.

@@ -12,6 +12,10 @@ services:
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}"
       ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:-cash_flow_redis_password},abortConnect=false"
       Redis__InstanceName: "cash-flow:"
+      Outbox__BatchSize: "${OUTBOX_BATCH_SIZE:-20}"
+      Outbox__MaxRetryCount: "${OUTBOX_MAX_RETRY_COUNT:-5}"
+      Outbox__RetryDelaySeconds: "${OUTBOX_RETRY_DELAY_SECONDS:-30}"
+      Outbox__PublishIntervalSeconds: "${OUTBOX_PUBLISH_INTERVAL_SECONDS:-5}"
       RabbitMq__HostName: rabbitmq
       RabbitMq__Port: 5672
       RabbitMq__UserName: ${RABBITMQ_DEFAULT_USER:-cash_flow_user}

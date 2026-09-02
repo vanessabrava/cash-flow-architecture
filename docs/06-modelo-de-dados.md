@@ -58,6 +58,8 @@ Representa um evento de integração pendente ou já publicado no canal de event
 | occurredAt | data/hora | Sim | Momento em que o evento ocorreu no domínio. |
 | createdAt | data/hora | Sim | Momento em que a mensagem foi registrada na Outbox. |
 | processedAt | data/hora | Não | Momento em que a mensagem foi publicada com sucesso. |
+| nextAttemptAt | data/hora | Não | Próximo momento em que a mensagem pode ser publicada novamente após falha temporária. |
+| failedAt | data/hora | Não | Momento em que a mensagem atingiu o limite de tentativas e deixou de ser republicada automaticamente. |
 | retryCount | inteiro | Sim | Quantidade de tentativas de publicação. |
 | lastError | texto | Não | Último erro registrado ao tentar publicar a mensagem. |
 
@@ -168,6 +170,8 @@ erDiagram
         datetime occurredAt
         datetime createdAt
         datetime processedAt
+        datetime nextAttemptAt
+        datetime failedAt
         int retryCount
         string lastError
     }
@@ -190,6 +194,8 @@ O relacionamento entre lançamentos e saldo diário é derivado pela data de ref
 | OutboxMessage | id | Chave interna do banco. |
 | OutboxMessage | eventUid | Evitar duplicidade de evento na Outbox. |
 | OutboxMessage | processedAt | Buscar mensagens pendentes de publicação. |
+| OutboxMessage | nextAttemptAt | Buscar mensagens liberadas para nova tentativa de publicação. |
+| OutboxMessage | failedAt | Identificar mensagens que atingiram falha definitiva. |
 | OutboxMessage | createdAt | Publicar mensagens pendentes em ordem de criação. |
 | DailyBalance | id | Chave interna do banco. |
 | DailyBalance | uid | Consulta por identificador público, se necessário. |

@@ -25,6 +25,7 @@ Na criação de lançamento:
 5. A API confirma a criação ao consumidor.
 6. Uma rotina em segundo plano publica mensagens pendentes da Outbox no RabbitMQ.
 7. Após publicação com sucesso, a mensagem recebe `processedAt`.
+8. Em caso de falha, a rotina aplica a política de retentativas descrita no ADR 0008.
 
 ## Consequências Positivas
 
@@ -37,7 +38,7 @@ Na criação de lançamento:
 
 - Adiciona uma tabela operacional ao PostgreSQL.
 - Exige rotina de publicação em segundo plano.
-- Exige estratégia de limpeza, retry e fila de erro em evolução futura.
+- Exige estratégia de limpeza e fila de erro dedicada em evolução futura.
 - A publicação deixa de ser imediata e passa a ser eventualmente consistente.
 
 ## Alternativas Consideradas
@@ -58,8 +59,6 @@ Foi descartada por aumentar complexidade operacional e acoplamento entre tecnolo
 
 Em uma evolução produtiva, a Outbox deve avançar para:
 
-- política de retry com backoff;
-- limite de tentativas;
 - fila ou estado de erro definitivo;
 - limpeza de mensagens antigas já processadas;
 - métricas de mensagens pendentes, publicadas e com erro;

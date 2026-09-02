@@ -40,7 +40,7 @@ A API mantém uma cópia local temporária dos eventos quando executada no modo 
 - Será necessário monitorar falhas no processamento assíncrono.
 - A solução precisará prever reprocessamento e tratamento de duplicidade.
 - A arquitetura fica mais complexa do que um fluxo totalmente síncrono.
-- A rotina de publicação da Outbox precisa de política avançada de retry, fila de erro e limpeza de mensagens antigas em uma evolução produtiva.
+- A rotina de publicação da Outbox ainda pode evoluir para backoff exponencial, fila de erro dedicada e limpeza de mensagens antigas.
 
 ## Alternativas Consideradas
 

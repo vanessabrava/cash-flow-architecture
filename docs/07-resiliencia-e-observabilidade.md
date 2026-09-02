@@ -11,7 +11,7 @@ A solução deve continuar aceitando lançamentos financeiros mesmo quando a con
 | Cenário | Impacto | Estratégia |
 | --- | --- | --- |
 | Falha temporária no processador de consolidação | Novos lançamentos continuam sendo registrados, mas o saldo pode ficar atrasado. | Manter eventos pendentes para processamento posterior. |
-| Falha temporária no RabbitMQ durante criação de lançamento | Lançamento não deve ser perdido nem rejeitado apenas por falha momentânea da mensageria. | Gravar evento na Outbox do PostgreSQL e publicar posteriormente. |
+| Falha temporária no RabbitMQ durante criação de lançamento | Lançamento não deve ser perdido nem rejeitado apenas por falha momentânea da mensageria. | Gravar evento na Outbox do PostgreSQL e publicar posteriormente com retentativas controladas. |
 | Falha ao atualizar saldo consolidado | Saldo da data pode ficar desatualizado ou com status de falha. | Registrar erro, permitir nova tentativa e preservar os lançamentos originais. |
 | Duplicidade no processamento de evento | Saldo pode ser calculado incorretamente se o evento for aplicado mais de uma vez. | Prever processamento idempotente na consolidação. |
 | Retry duplicado na criação de lançamento | O mesmo lançamento pode ser registrado mais de uma vez por timeout, clique duplicado ou retry automático. | Aceitar `Idempotency-Key` no `POST /entries` para reaproveitar o resultado da primeira criação. |
@@ -32,6 +32,8 @@ A API de Lançamentos deve persistir o lançamento e registrar um evento de inte
 A criação do lançamento grava o evento `EntryCreated` na tabela `outbox_messages` dentro do PostgreSQL. Uma rotina em segundo plano publica mensagens pendentes no RabbitMQ e marca `processedAt` após sucesso.
 
 Essa abordagem reduz a janela de falha entre salvar o lançamento e publicar o evento.
+
+Quando a publicação falha, a mensagem recebe incremento em `retryCount` e uma nova tentativa é agendada em `nextAttemptAt`. Após atingir o limite configurado de tentativas, a mensagem recebe `failedAt` e deixa de ser republicada automaticamente.
 
 ### Reprocessamento
 
@@ -85,7 +87,7 @@ Os logs devem permitir rastrear as principais operações da solução.
 | Criação de lançamento | `correlationId`, `entryUid`, tipo, valor, data de referência e momento da criação. |
 | Reutilização de chave de idempotência | `correlationId`, `idempotencyKey`, operação, `entryUid` retornado e resultado da reutilização. |
 | Publicação de evento | `correlationId`, `eventUid`, `entryUid`, tipo do evento e momento da publicação. |
-| Publicação de mensagem da Outbox | `correlationId`, `eventUid`, tipo do evento, tentativa e resultado da publicação. |
+| Publicação de mensagem da Outbox | `correlationId`, `eventUid`, tipo do evento, tentativa, erro, estado final e resultado da publicação. |
 | Processamento de consolidação | `correlationId`, `eventUid`, `entryUid`, data consolidada e resultado do processamento. |
 | Falha de consolidação | `correlationId`, `eventUid`, `entryUid`, motivo da falha e tentativa de processamento. |
 | Consulta de saldo | `correlationId`, data solicitada, status do saldo e momento da consulta. |
@@ -119,6 +121,7 @@ Métricas sugeridas para acompanhar a saúde da solução:
 | Quantidade de eventos publicados | Validar se lançamentos estão gerando eventos. |
 | Quantidade de mensagens pendentes na Outbox | Identificar eventos ainda não publicados no RabbitMQ. |
 | Quantidade de falhas de publicação da Outbox | Identificar indisponibilidade ou instabilidade da mensageria. |
+| Quantidade de mensagens com falha definitiva na Outbox | Identificar eventos que exigem análise ou reprocessamento administrativo. |
 | Quantidade de eventos pendentes | Acompanhar acúmulo no processamento assíncrono. |
 | Tempo médio de consolidação | Medir atraso entre lançamento e saldo consolidado. |
 | Quantidade de falhas de consolidação | Identificar instabilidade no processamento. |
@@ -148,6 +151,7 @@ Alertas devem ser considerados para situações que afetam a operação:
 - aumento anormal de eventos pendentes;
 - aumento anormal de mensagens pendentes na Outbox;
 - mensagens da Outbox paradas por muito tempo sem `processedAt`;
+- mensagens da Outbox com `failedAt` preenchido;
 - atraso elevado entre criação do lançamento e consolidação;
 - erro recorrente ao persistir saldo consolidado;
 - indisponibilidade da API de Lançamentos;
@@ -172,8 +176,8 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 - Evoluir autenticação por API Key local para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
 - Definir autorização por escopo, perfil ou recurso.
 - Evoluir retry e observabilidade da atualização de cache após consolidação.
-- Definir política avançada de retentativas para Outbox e RabbitMQ.
-- Definir estratégia de fila de erro ou estado definitivo de falha.
+- Evoluir a política da Outbox para backoff exponencial, jitter e reprocessamento administrativo.
+- Definir estratégia de fila de erro dedicada.
 - Definir limites aceitáveis de atraso na consolidação.
 - Definir formato final dos logs estruturados.
 - Definir dashboards e alertas operacionais.

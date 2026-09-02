@@ -20,6 +20,7 @@ builder.Services.Configure<JsonOptions>(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 builder.Services.AddSingleton<FileIntegrationEventStore>();
+builder.Services.Configure<OutboxOptions>(builder.Configuration.GetSection("Outbox"));
 
 if (builder.Environment.IsEnvironment("Testing")
     || builder.Configuration.GetValue("Storage:UseFileStorage", false))

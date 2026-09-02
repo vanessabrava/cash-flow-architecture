@@ -89,6 +89,8 @@ public sealed class CashFlowDbContext(DbContextOptions<CashFlowDbContext> option
             message.HasKey(entity => entity.Id);
             message.HasIndex(entity => entity.EventUid).IsUnique();
             message.HasIndex(entity => entity.ProcessedAt);
+            message.HasIndex(entity => entity.NextAttemptAt);
+            message.HasIndex(entity => entity.FailedAt);
             message.HasIndex(entity => entity.CreatedAt);
 
             message.Property(entity => entity.Id).HasColumnName("id");
@@ -99,6 +101,8 @@ public sealed class CashFlowDbContext(DbContextOptions<CashFlowDbContext> option
             message.Property(entity => entity.OccurredAt).HasColumnName("occurred_at").IsRequired();
             message.Property(entity => entity.CreatedAt).HasColumnName("created_at").IsRequired();
             message.Property(entity => entity.ProcessedAt).HasColumnName("processed_at");
+            message.Property(entity => entity.NextAttemptAt).HasColumnName("next_attempt_at");
+            message.Property(entity => entity.FailedAt).HasColumnName("failed_at");
             message.Property(entity => entity.RetryCount).HasColumnName("retry_count");
             message.Property(entity => entity.LastError).HasColumnName("last_error").HasMaxLength(1000);
         });
@@ -186,6 +190,10 @@ public sealed class OutboxMessageEntity
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset? ProcessedAt { get; set; }
+
+    public DateTimeOffset? NextAttemptAt { get; set; }
+
+    public DateTimeOffset? FailedAt { get; set; }
 
     public int RetryCount { get; set; }
 

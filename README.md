@@ -31,7 +31,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   │   ├── 0004-modularizar-api-worker-core-e-infrastructure.md
 │   │   ├── 0005-usar-api-key-local-para-protecao-inicial.md
 │   │   ├── 0006-usar-redis-para-cache-de-saldo-diario.md
-│   │   └── 0007-usar-outbox-para-publicacao-confiavel-de-eventos.md
+│   │   ├── 0007-usar-outbox-para-publicacao-confiavel-de-eventos.md
+│   │   └── 0008-controlar-retentativas-da-outbox.md
 │   ├── 01-contexto-e-objetivo.md
 │   ├── 02-requisitos-iniciais.md
 │   ├── 03-premissas-restricoes-e-decisoes.md
@@ -75,6 +76,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [ADR 0005 - Usar API Key local para proteção inicial](docs/adr/0005-usar-api-key-local-para-protecao-inicial.md)
 - [ADR 0006 - Usar Redis para cache de saldo diário](docs/adr/0006-usar-redis-para-cache-de-saldo-diario.md)
 - [ADR 0007 - Usar Outbox para publicação confiável de eventos](docs/adr/0007-usar-outbox-para-publicacao-confiavel-de-eventos.md)
+- [ADR 0008 - Controlar retentativas da Outbox](docs/adr/0008-controlar-retentativas-da-outbox.md)
 
 ## Idioma do Projeto
 
@@ -128,6 +130,7 @@ O arquivo `compose.yaml` prepara a aplicação e os serviços necessários para 
 - Redis 8 para cache de consultas de saldo diário consolidado.
 - Redis Commander para consulta web das chaves do Redis local.
 - Outbox no PostgreSQL para publicação confiável de eventos.
+- Retentativas controladas da Outbox para falhas temporárias de publicação.
 - Serviço temporário de migrations para criar ou atualizar o schema do PostgreSQL.
 - Worker de consolidação para consumir eventos do RabbitMQ e atualizar o saldo diário.
 
@@ -265,6 +268,15 @@ Credenciais locais padrão:
 | Redis | Não se aplica | `cash_flow_redis_password` |
 | Redis Commander | `cash_flow_user` | `cash_flow_password` |
 
+Configuração local da Outbox:
+
+| Variável | Valor padrão | Uso |
+| --- | --- | --- |
+| `OUTBOX_BATCH_SIZE` | `20` | Quantidade máxima de mensagens publicadas por ciclo. |
+| `OUTBOX_MAX_RETRY_COUNT` | `5` | Limite de tentativas antes de marcar falha definitiva. |
+| `OUTBOX_RETRY_DELAY_SECONDS` | `30` | Tempo de espera entre tentativas após falha. |
+| `OUTBOX_PUBLISH_INTERVAL_SECONDS` | `5` | Intervalo entre ciclos de busca por mensagens publicáveis. |
+
 Chave local padrão da API:
 
 ```text
@@ -399,7 +411,7 @@ Queue: cash-flow.entry-created
 Routing key: entry.created
 ```
 
-Nesta etapa, a API também mantém uma cópia local temporária do evento em arquivo JSON:
+Quando executada no modo de armazenamento em arquivo, a API mantém uma cópia local temporária do evento em arquivo JSON:
 
 ```text
 src/CashFlowArchitecture.Api/data/integration-events.json
@@ -407,7 +419,7 @@ src/CashFlowArchitecture.Api/data/integration-events.json
 
 A pasta `data/` é ignorada pelo Git porque contém dados locais de execução.
 
-Esse arquivo local existe apenas para manter o endpoint manual de consolidação funcionando durante a evolução do desafio.
+Esse arquivo local existe apenas como apoio de desenvolvimento para cenários sem PostgreSQL/RabbitMQ. Na execução principal com Docker Compose, o fluxo usa PostgreSQL, Outbox e RabbitMQ.
 
 Após cadastrar um lançamento, a fila `cash-flow.entry-created` deve aparecer no RabbitMQ Management.
 
@@ -418,6 +430,15 @@ outbox_messages
 ```
 
 Mensagens ainda não publicadas ficam com `processed_at` vazio. Após publicação com sucesso no RabbitMQ, `processed_at` é preenchido.
+
+Se a publicação falhar, a Outbox registra:
+
+| Campo | Significado |
+| --- | --- |
+| `retry_count` | Quantidade de tentativas já realizadas. |
+| `next_attempt_at` | Próximo horário em que a mensagem pode ser publicada novamente. |
+| `last_error` | Último erro registrado. |
+| `failed_at` | Horário em que a mensagem atingiu o limite de tentativas e deixou de ser republicada automaticamente. |
 
 Para validar no painel:
 
@@ -593,6 +614,10 @@ Arquivo `.vscode/launch.json`:
         "ConnectionStrings__Redis": "localhost:6379,password=cash_flow_redis_password,abortConnect=false",
         "Redis__InstanceName": "cash-flow:",
         "Redis__DailyBalanceTtlMinutes": "15",
+        "Outbox__BatchSize": "20",
+        "Outbox__MaxRetryCount": "5",
+        "Outbox__RetryDelaySeconds": "30",
+        "Outbox__PublishIntervalSeconds": "5",
         "DOTNET_ROOT": "/usr/local/share/dotnet",
         "PATH": "/usr/local/share/dotnet:/usr/local/bin:/opt/homebrew/bin:${env:PATH}"
       },
@@ -646,7 +671,7 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 
 1. Evoluir a autenticação local por API Key para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
 2. Implementar autorização por escopo, perfil ou recurso.
-3. Adicionar política avançada de retentativas e fila de erro para Outbox/RabbitMQ.
+3. Evoluir a Outbox para backoff exponencial, fila de erro dedicada e reprocessamento administrativo.
 4. Evoluir retry e observabilidade da atualização de cache após consolidação.
 5. Criar testes de integração com PostgreSQL, RabbitMQ e Redis em containers.
 6. Detalhar observabilidade com logs estruturados, métricas, tracing e health checks de dependências.

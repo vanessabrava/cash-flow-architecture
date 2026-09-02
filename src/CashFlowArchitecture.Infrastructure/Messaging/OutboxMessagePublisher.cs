@@ -6,12 +6,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CashFlowArchitecture.Infrastructure.Messaging;
 
 public sealed class OutboxMessagePublisher(
     IServiceScopeFactory scopeFactory,
     RabbitMqIntegrationEventPublisher rabbitMqIntegrationEventPublisher,
+    IOptions<OutboxOptions> outboxOptions,
     ILogger<OutboxMessagePublisher> logger) : BackgroundService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -20,9 +22,14 @@ public sealed class OutboxMessagePublisher(
         Converters = { new JsonStringEnumConverter() }
     };
 
+    private readonly int batchSize = Math.Max(1, outboxOptions.Value.BatchSize);
+    private readonly int maxRetryCount = Math.Max(1, outboxOptions.Value.MaxRetryCount);
+    private readonly int retryDelaySeconds = Math.Max(1, outboxOptions.Value.RetryDelaySeconds);
+    private readonly int publishIntervalSeconds = Math.Max(1, outboxOptions.Value.PublishIntervalSeconds);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(publishIntervalSeconds));
 
         await PublishPendingMessagesAsync(stoppingToken);
 
@@ -36,10 +43,13 @@ public sealed class OutboxMessagePublisher(
     {
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CashFlowDbContext>();
+        var now = DateTimeOffset.UtcNow;
         var messages = await dbContext.OutboxMessages
-            .Where(message => message.ProcessedAt == null)
+            .Where(message => message.ProcessedAt == null
+                && message.FailedAt == null
+                && (message.NextAttemptAt == null || message.NextAttemptAt <= now))
             .OrderBy(message => message.CreatedAt)
-            .Take(20)
+            .Take(batchSize)
             .ToArrayAsync(cancellationToken);
 
         foreach (var message in messages)
@@ -50,14 +60,14 @@ public sealed class OutboxMessagePublisher(
 
                 if (integrationEvent is null)
                 {
-                    message.RetryCount++;
-                    message.LastError = "Payload invalido para publicacao.";
+                    MarkAsFailed(message, "Payload invalido para publicacao.", maxRetryCount);
                     continue;
                 }
 
                 await rabbitMqIntegrationEventPublisher.PublishAsync(integrationEvent, cancellationToken);
 
                 message.ProcessedAt = DateTimeOffset.UtcNow;
+                message.NextAttemptAt = null;
                 message.LastError = null;
 
                 logger.LogInformation(
@@ -67,18 +77,50 @@ public sealed class OutboxMessagePublisher(
             }
             catch (Exception exception)
             {
-                message.RetryCount++;
-                message.LastError = exception.Message;
+                RegisterFailure(message, exception.Message, maxRetryCount, retryDelaySeconds);
 
                 logger.LogWarning(
                     exception,
-                    "Error publishing outbox message. EventUid: {EventUid}. CorrelationId: {CorrelationId}. RetryCount: {RetryCount}.",
+                    "Error publishing outbox message. EventUid: {EventUid}. CorrelationId: {CorrelationId}. RetryCount: {RetryCount}. Failed: {Failed}.",
                     message.EventUid,
                     message.CorrelationId,
-                    message.RetryCount);
+                    message.RetryCount,
+                    message.FailedAt is not null);
             }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void RegisterFailure(
+        OutboxMessageEntity message,
+        string error,
+        int maxRetryCount,
+        int retryDelaySeconds)
+    {
+        message.RetryCount++;
+        message.LastError = Truncate(error);
+
+        if (message.RetryCount >= maxRetryCount)
+        {
+            message.FailedAt = DateTimeOffset.UtcNow;
+            message.NextAttemptAt = null;
+            return;
+        }
+
+        message.NextAttemptAt = DateTimeOffset.UtcNow.AddSeconds(retryDelaySeconds);
+    }
+
+    private static void MarkAsFailed(OutboxMessageEntity message, string error, int maxRetryCount)
+    {
+        message.RetryCount = maxRetryCount;
+        message.FailedAt = DateTimeOffset.UtcNow;
+        message.NextAttemptAt = null;
+        message.LastError = Truncate(error);
+    }
+
+    private static string Truncate(string value)
+    {
+        return value.Length <= 1000 ? value : value[..1000];
     }
 }
