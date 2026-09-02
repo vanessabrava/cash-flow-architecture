@@ -34,6 +34,5 @@ public sealed class PostgresIdempotencyStore(CashFlowDbContext dbContext) : IIde
             ExpiresAt = record.ExpiresAt
         });
 
-        dbContext.SaveChanges();
     }
 }

@@ -2,7 +2,7 @@
 
 Este documento descreve o modelo de dados da solução para suportar lançamentos financeiros e saldo diário consolidado.
 
-Na implementação atual, a persistência relacional usa PostgreSQL com EF Core. Eventos de integração são publicados no RabbitMQ e também registrados localmente em arquivo JSON de forma temporária, até a separação do worker assíncrono de consolidação.
+Na implementação atual, a persistência relacional usa PostgreSQL com EF Core. Eventos de integração são gravados primeiro em uma Outbox transacional no PostgreSQL e publicados posteriormente no RabbitMQ.
 
 ## Diretriz de Identificação
 
@@ -43,6 +43,23 @@ Representa o controle de idempotência para evitar duplicidade acidental na cria
 | requestHash | texto | Sim | Hash do payload usado para detectar reutilização da mesma chave com conteúdo diferente. |
 | createdAt | data/hora | Sim | Data e hora em que a chave foi registrada. |
 | expiresAt | data/hora | Sim | Data e hora limite para retenção operacional da chave. |
+
+## Entidade: OutboxMessage
+
+Representa um evento de integração pendente ou já publicado no canal de eventos.
+
+| Campo | Tipo Conceitual | Obrigatório | Descrição |
+| --- | --- | --- | --- |
+| id | inteiro | Sim | Identificador interno do banco de dados. |
+| eventUid | GUID | Sim | Identificador público do evento. |
+| eventType | texto | Sim | Tipo do evento, por exemplo `EntryCreated`. |
+| correlationId | texto | Sim | Identificador usado para rastrear a jornada entre API, Outbox, RabbitMQ e worker. |
+| payload | json | Sim | Conteúdo completo do evento a ser publicado. |
+| occurredAt | data/hora | Sim | Momento em que o evento ocorreu no domínio. |
+| createdAt | data/hora | Sim | Momento em que a mensagem foi registrada na Outbox. |
+| processedAt | data/hora | Não | Momento em que a mensagem foi publicada com sucesso. |
+| retryCount | inteiro | Sim | Quantidade de tentativas de publicação. |
+| lastError | texto | Não | Último erro registrado ao tentar publicar a mensagem. |
 
 ## Regras da Entidade FinancialEntry
 
@@ -142,6 +159,19 @@ erDiagram
         datetime expiresAt
     }
 
+    OUTBOX_MESSAGE {
+        int id
+        guid eventUid
+        string eventType
+        string correlationId
+        json payload
+        datetime occurredAt
+        datetime createdAt
+        datetime processedAt
+        int retryCount
+        string lastError
+    }
+
     DAILY_BALANCE ||--o{ DAILY_BALANCE_PROCESSED_EVENT : controla
 ```
 
@@ -157,6 +187,10 @@ O relacionamento entre lançamentos e saldo diário é derivado pela data de ref
 | IdempotencyRecord | id | Chave interna do banco. |
 | IdempotencyRecord | key + operation | Evitar duplicidade por retry na mesma operação. |
 | IdempotencyRecord | expiresAt | Apoiar limpeza periódica de registros antigos. |
+| OutboxMessage | id | Chave interna do banco. |
+| OutboxMessage | eventUid | Evitar duplicidade de evento na Outbox. |
+| OutboxMessage | processedAt | Buscar mensagens pendentes de publicação. |
+| OutboxMessage | createdAt | Publicar mensagens pendentes em ordem de criação. |
 | DailyBalance | id | Chave interna do banco. |
 | DailyBalance | uid | Consulta por identificador público, se necessário. |
 | DailyBalance | balanceDate | Consulta do saldo consolidado por data. |

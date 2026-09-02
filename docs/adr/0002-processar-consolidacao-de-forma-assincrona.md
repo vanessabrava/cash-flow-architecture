@@ -16,7 +16,7 @@ Planejar a consolidação diária como um processamento assíncrono.
 
 Após registrar um lançamento, a solução deve publicar uma informação de alteração para que a consolidação seja processada separadamente. A API de Lançamentos não deve depender da conclusão da consolidação para responder ao comerciante.
 
-Nesta etapa da implementação, a API publica eventos `EntryCreated` no RabbitMQ usando:
+Nesta etapa da implementação, a API grava eventos `EntryCreated` em uma Outbox transacional no PostgreSQL. Uma rotina em segundo plano publica esses eventos no RabbitMQ usando:
 
 - exchange `cash-flow.events`;
 - fila `cash-flow.entry-created`;
@@ -24,7 +24,7 @@ Nesta etapa da implementação, a API publica eventos `EntryCreated` no RabbitMQ
 
 O worker `cash-flow-consolidation-worker` roda a partir do projeto `CashFlowArchitecture.Worker`, consome a fila `cash-flow.entry-created` e atualiza o saldo diário consolidado no PostgreSQL.
 
-A API mantém uma cópia local temporária dos eventos para permitir o processamento manual pelo endpoint `POST /daily-balances/process-events` durante a evolução do desafio.
+A API mantém uma cópia local temporária dos eventos quando executada no modo de armazenamento em arquivo, permitindo o processamento manual pelo endpoint `POST /daily-balances/process-events` durante a evolução do desafio.
 
 ## Consequências Positivas
 
@@ -40,7 +40,7 @@ A API mantém uma cópia local temporária dos eventos para permitir o processam
 - Será necessário monitorar falhas no processamento assíncrono.
 - A solução precisará prever reprocessamento e tratamento de duplicidade.
 - A arquitetura fica mais complexa do que um fluxo totalmente síncrono.
-- A solução deve evoluir para Outbox ou mecanismo equivalente antes de produção, evitando perda de evento em falhas entre gravação no banco e publicação na mensageria.
+- A rotina de publicação da Outbox precisa de política avançada de retry, fila de erro e limpeza de mensagens antigas em uma evolução produtiva.
 
 ## Alternativas Consideradas
 

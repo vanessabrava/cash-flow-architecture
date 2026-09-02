@@ -11,6 +11,8 @@ public sealed class CashFlowDbContext(DbContextOptions<CashFlowDbContext> option
 
     public DbSet<IdempotencyRecordEntity> IdempotencyRecords => Set<IdempotencyRecordEntity>();
 
+    public DbSet<OutboxMessageEntity> OutboxMessages => Set<OutboxMessageEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<FinancialEntryEntity>(entry =>
@@ -80,6 +82,26 @@ public sealed class CashFlowDbContext(DbContextOptions<CashFlowDbContext> option
             record.Property(entity => entity.CreatedAt).HasColumnName("created_at").IsRequired();
             record.Property(entity => entity.ExpiresAt).HasColumnName("expires_at").IsRequired();
         });
+
+        modelBuilder.Entity<OutboxMessageEntity>(message =>
+        {
+            message.ToTable("outbox_messages");
+            message.HasKey(entity => entity.Id);
+            message.HasIndex(entity => entity.EventUid).IsUnique();
+            message.HasIndex(entity => entity.ProcessedAt);
+            message.HasIndex(entity => entity.CreatedAt);
+
+            message.Property(entity => entity.Id).HasColumnName("id");
+            message.Property(entity => entity.EventUid).HasColumnName("event_uid").IsRequired();
+            message.Property(entity => entity.EventType).HasColumnName("event_type").HasMaxLength(100).IsRequired();
+            message.Property(entity => entity.CorrelationId).HasColumnName("correlation_id").HasMaxLength(100).IsRequired();
+            message.Property(entity => entity.Payload).HasColumnName("payload").HasColumnType("jsonb").IsRequired();
+            message.Property(entity => entity.OccurredAt).HasColumnName("occurred_at").IsRequired();
+            message.Property(entity => entity.CreatedAt).HasColumnName("created_at").IsRequired();
+            message.Property(entity => entity.ProcessedAt).HasColumnName("processed_at");
+            message.Property(entity => entity.RetryCount).HasColumnName("retry_count");
+            message.Property(entity => entity.LastError).HasColumnName("last_error").HasMaxLength(1000);
+        });
     }
 }
 
@@ -145,4 +167,27 @@ public sealed class IdempotencyRecordEntity
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset ExpiresAt { get; set; }
+}
+
+public sealed class OutboxMessageEntity
+{
+    public long Id { get; set; }
+
+    public Guid EventUid { get; set; }
+
+    public string EventType { get; set; } = string.Empty;
+
+    public string CorrelationId { get; set; } = string.Empty;
+
+    public string Payload { get; set; } = string.Empty;
+
+    public DateTimeOffset OccurredAt { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset? ProcessedAt { get; set; }
+
+    public int RetryCount { get; set; }
+
+    public string? LastError { get; set; }
 }

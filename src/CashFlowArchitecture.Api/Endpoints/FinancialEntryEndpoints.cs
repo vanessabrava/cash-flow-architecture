@@ -36,6 +36,7 @@ internal static class FinancialEntryEndpoints
         IFinancialEntryStore store,
         IIdempotencyStore idempotencyStore,
         IIntegrationEventPublisher eventPublisher,
+        IUnitOfWork unitOfWork,
         CancellationToken cancellationToken)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
@@ -107,6 +108,8 @@ internal static class FinancialEntryEndpoints
                 DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow.AddHours(24)));
         }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Results.Created($"/entries/{entry.Uid}", ToResponse(correlationId, entry));
     }

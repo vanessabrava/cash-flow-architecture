@@ -40,6 +40,7 @@ As decisões abaixo consolidam escolhas já registradas ou implementadas no repo
 | DA-006 | Separar a solution em `Api`, `Worker`, `Core` e `Infrastructure`. | Essa organização evita dependência direta entre serviços executáveis e mantém a implementação proporcional ao desafio. |
 | DA-007 | Proteger endpoints de negócio com API Key local. | Essa decisão adiciona uma barreira inicial de autenticação sem introduzir uma solução completa de identidade nesta etapa do desafio. |
 | DA-008 | Usar Redis como cache de leitura do saldo diário consolidado. | Essa decisão reduz leituras repetidas no PostgreSQL sem mudar a fonte da verdade da solução. |
+| DA-009 | Usar Outbox para publicação confiável de eventos. | Essa decisão reduz o risco de lançamento salvo sem evento publicado no RabbitMQ. |
 
 ## Pontos em Aberto
 
@@ -47,8 +48,7 @@ Os pontos abaixo permanecem como evolução planejada:
 
 - Evolução da autenticação local para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
 - Estratégia de autorização por escopo, perfil ou recurso.
-- Padrão Outbox para publicação confiável de eventos.
-- Política de retentativas e fila de erro.
+- Política avançada de retentativas e fila de erro para mensagens da Outbox e do RabbitMQ.
 - Estratégia de retry e observabilidade para falhas de atualização do cache.
 - Estratégia de observabilidade completa.
 - Testes de integração com dependências reais em containers.

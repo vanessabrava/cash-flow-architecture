@@ -29,6 +29,7 @@ if (builder.Environment.IsEnvironment("Testing")
     builder.Services.AddSingleton<IDailyBalanceStore, FileDailyBalanceStore>();
     builder.Services.AddSingleton<IDailyBalanceCache, DistributedDailyBalanceCache>();
     builder.Services.AddSingleton<IIdempotencyStore, FileIdempotencyStore>();
+    builder.Services.AddSingleton<IUnitOfWork, NoOpUnitOfWork>();
     builder.Services.AddSingleton<IIntegrationEventPublisher>(provider =>
         provider.GetRequiredService<FileIntegrationEventStore>());
 }
@@ -45,8 +46,10 @@ else
     builder.Services.AddScoped<IDailyBalanceStore, PostgresDailyBalanceStore>();
     builder.Services.AddScoped<IDailyBalanceCache, DistributedDailyBalanceCache>();
     builder.Services.AddScoped<IIdempotencyStore, PostgresIdempotencyStore>();
+    builder.Services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
     builder.Services.AddSingleton<RabbitMqIntegrationEventPublisher>();
-    builder.Services.AddSingleton<IIntegrationEventPublisher, FileAndRabbitMqIntegrationEventPublisher>();
+    builder.Services.AddScoped<IIntegrationEventPublisher, OutboxIntegrationEventPublisher>();
+    builder.Services.AddHostedService<OutboxMessagePublisher>();
 }
 
 builder.Services.AddScoped<DailyBalanceConsolidationProcessor>();

@@ -42,7 +42,7 @@ Regras da decisão:
 - Introduz mais uma dependência operacional.
 - Pode retornar uma resposta defasada se a atualização do PostgreSQL funcionar e a atualização do Redis falhar.
 - Exige observabilidade específica para taxa de acerto, erro e latência do cache.
-- Exige estratégia futura de invalidação, retry ou Outbox caso os requisitos de frescor aumentem.
+- Exige estratégia futura de invalidação e retry caso os requisitos de frescor aumentem.
 
 ## Alternativas Consideradas
 
@@ -70,5 +70,5 @@ Em uma solução produtiva, a estratégia de cache pode evoluir para:
 - health check de Redis separado de liveness;
 - invalidação do cache após consolidação;
 - retry específico para falha de atualização do cache;
-- Outbox ou evento de atualização de projeção para reforçar consistência entre PostgreSQL e Redis;
+- evento dedicado de atualização de projeção, caso a atualização direta pelo worker deixe de ser suficiente;
 - fallback com circuit breaker caso o Redis apresente instabilidade.

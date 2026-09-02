@@ -14,7 +14,8 @@ flowchart LR
     User --> BalanceApi[API de Consulta de Saldo]
 
     EntryApi --> EntryStore[(Base de Lançamentos)]
-    EntryApi --> EventChannel[Canal de Eventos]
+    EntryApi --> Outbox[(Outbox de Eventos)]
+    Outbox --> EventChannel[Canal de Eventos]
 
     EventChannel --> ConsolidationWorker[Processador de Consolidação]
     ConsolidationWorker --> BalanceStore[(Base de Saldos Consolidados)]
@@ -30,6 +31,7 @@ flowchart LR
 | --- | --- |
 | API de Lançamentos | Receber, validar e registrar lançamentos financeiros de crédito e débito. |
 | Base de Lançamentos | Persistir os lançamentos originais como fonte principal da informação. |
+| Outbox de Eventos | Persistir eventos pendentes na mesma transação do lançamento para publicação posterior. |
 | Canal de Eventos | Desacoplar o registro de lançamentos do processamento de consolidação. |
 | Processador de Consolidação | Consumir eventos de lançamentos e atualizar o saldo diário consolidado. |
 | Base de Saldos Consolidados | Armazenar o resultado consolidado por data para consulta eficiente. |
@@ -41,8 +43,9 @@ flowchart LR
 1. O comerciante envia um lançamento financeiro.
 2. A API de Lançamentos valida os dados recebidos.
 3. O lançamento é salvo na Base de Lançamentos.
-4. Um evento de lançamento registrado é publicado no Canal de Eventos.
+4. O evento `EntryCreated` é salvo na Outbox de Eventos na mesma confirmação de persistência.
 5. A API retorna a confirmação do registro ao comerciante.
+6. Uma rotina em segundo plano publica eventos pendentes da Outbox no RabbitMQ.
 
 ## Fluxo de Consolidação
 
@@ -65,6 +68,8 @@ flowchart LR
 A API de Lançamentos não depende da disponibilidade da API de Consulta de Saldo nem do Processador de Consolidação para registrar novos lançamentos.
 
 Caso a consolidação esteja temporariamente indisponível, os lançamentos continuam sendo registrados. A consolidação pode ser retomada posteriormente a partir dos eventos pendentes no RabbitMQ.
+
+Caso o RabbitMQ esteja temporariamente indisponível no momento da criação do lançamento, a API ainda pode registrar o lançamento e armazenar o evento na Outbox para publicação posterior.
 
 ## Consistência dos Dados
 
@@ -95,6 +100,7 @@ Esta visão lógica foi detalhada nos seguintes documentos:
 | --- | --- | --- |
 | API | .NET com C# | Projeto `CashFlowArchitecture.Api`, responsável pelos contratos HTTP e regras de entrada. |
 | Persistência | PostgreSQL | Banco relacional para lançamentos, saldos consolidados, eventos processados e idempotência. |
+| Outbox | PostgreSQL | Tabela `outbox_messages` para publicação confiável de eventos. |
 | Cache | Redis | Cache temporário para consultas de saldo diário consolidado. |
 | Consulta local de dados | Adminer | Interface web local para inspecionar o PostgreSQL durante o desenvolvimento. |
 | Consulta local de cache | Redis Commander | Interface web local para inspecionar chaves, valores e TTLs do Redis durante o desenvolvimento. |

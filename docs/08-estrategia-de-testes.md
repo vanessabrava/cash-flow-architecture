@@ -13,6 +13,7 @@ A estratégia de testes deve garantir que:
 - eventos duplicados não gerem saldo duplicado;
 - retries na criação de lançamentos não criem duplicidade quando `Idempotency-Key` for enviada;
 - falhas de consolidação possam ser diagnosticadas e reprocessadas;
+- falhas temporárias de mensageria não impeçam o registro do lançamento;
 - contratos públicos não exponham IDs internos do banco de dados.
 - `correlationId` seja retornado e propagado entre API, eventos e consolidação.
 - endpoints de negócio rejeitem requisições sem autenticação.
@@ -73,6 +74,8 @@ Testes de integração devem validar a comunicação entre componentes.
 | --- | --- |
 | API de Lançamentos e base de lançamentos | Persistir lançamento válido e permitir consulta posterior. |
 | API de Lançamentos e canal de eventos | Publicar evento após criação de lançamento. |
+| API de Lançamentos e Outbox | Gravar mensagem de Outbox junto com o lançamento. |
+| Publicador de Outbox e RabbitMQ | Publicar mensagens pendentes e marcar `processedAt`. |
 | Processador de Consolidação e canal de eventos | Consumir evento e atualizar saldo da data. |
 | Processador de Consolidação e base de saldos | Persistir totais de crédito, débito e saldo final. |
 | API de Consulta de Saldo e Redis | Armazenar e recuperar saldo consolidado em cache. |
@@ -86,6 +89,7 @@ Testes de resiliência devem validar o comportamento da solução em falhas prev
 | Cenário | Resultado Esperado |
 | --- | --- |
 | Consolidação indisponível | API de Lançamentos continua registrando novos lançamentos. |
+| RabbitMQ indisponível durante criação | API registra o lançamento e mantém evento pendente na Outbox. |
 | Retry duplicado no `POST /entries` | API retorna o lançamento já criado sem duplicar o registro quando `Idempotency-Key` é repetida. |
 | Evento processado mais de uma vez | Saldo consolidado não é duplicado. |
 | Redis indisponível | API continua consultando saldo no PostgreSQL. |
@@ -128,6 +132,7 @@ Testes end-to-end devem cobrir apenas jornadas essenciais.
 - Ampliar cobertura para testes de integração com PostgreSQL e RabbitMQ reais em containers.
 - Evoluir testes de autenticação quando a estratégia mudar de API Key local para OAuth2, OpenID Connect, JWT ou identidade serviço-a-serviço.
 - Adicionar testes de integração com Redis real em container.
+- Adicionar testes de integração para Outbox com PostgreSQL e RabbitMQ reais.
 - Definir cobertura mínima esperada para aprovação de Pull Request.
 - Adicionar testes automatizados específicos para o worker de consolidação.
 - Validar comportamento de retentativa e fila de erro quando essa estratégia for implementada.

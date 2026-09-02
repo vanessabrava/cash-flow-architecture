@@ -28,6 +28,7 @@ Requisitos não funcionais descrevem qualidades, restrições e condições de o
 | RNF-005 | A arquitetura deve favorecer separação de responsabilidades entre lançamento e consolidação. |
 | RNF-006 | A API e o worker devem poder executar em containers separados. |
 | RNF-007 | A solução deve evitar duplicidade causada por retry na criação de lançamentos. |
+| RNF-008 | A solução deve reduzir o risco de perda de evento entre a gravação do lançamento e a publicação para consolidação. |
 
 ## Dados Iniciais de Um Lançamento
 
@@ -42,4 +43,4 @@ Um lançamento financeiro deve conter, no mínimo:
 
 ## Observações
 
-Os requisitos acima são atendidos parcialmente pela implementação atual. Pontos como autenticação, autorização, Outbox, fila de erro e observabilidade completa permanecem como evolução planejada.
+Os requisitos acima são atendidos parcialmente pela implementação atual. Pontos como autorização, fila de erro, política avançada de retry e observabilidade completa permanecem como evolução planejada.

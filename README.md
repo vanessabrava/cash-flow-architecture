@@ -30,7 +30,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   │   ├── 0003-usar-idempotency-key-na-criacao-de-lancamentos.md
 │   │   ├── 0004-modularizar-api-worker-core-e-infrastructure.md
 │   │   ├── 0005-usar-api-key-local-para-protecao-inicial.md
-│   │   └── 0006-usar-redis-para-cache-de-saldo-diario.md
+│   │   ├── 0006-usar-redis-para-cache-de-saldo-diario.md
+│   │   └── 0007-usar-outbox-para-publicacao-confiavel-de-eventos.md
 │   ├── 01-contexto-e-objetivo.md
 │   ├── 02-requisitos-iniciais.md
 │   ├── 03-premissas-restricoes-e-decisoes.md
@@ -73,6 +74,7 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [ADR 0004 - Modularizar API, Worker, Core e Infrastructure](docs/adr/0004-modularizar-api-worker-core-e-infrastructure.md)
 - [ADR 0005 - Usar API Key local para proteção inicial](docs/adr/0005-usar-api-key-local-para-protecao-inicial.md)
 - [ADR 0006 - Usar Redis para cache de saldo diário](docs/adr/0006-usar-redis-para-cache-de-saldo-diario.md)
+- [ADR 0007 - Usar Outbox para publicação confiável de eventos](docs/adr/0007-usar-outbox-para-publicacao-confiavel-de-eventos.md)
 
 ## Idioma do Projeto
 
@@ -125,6 +127,7 @@ O arquivo `compose.yaml` prepara a aplicação e os serviços necessários para 
 - RabbitMQ 4 com painel de gerenciamento para mensageria.
 - Redis 8 para cache de consultas de saldo diário consolidado.
 - Redis Commander para consulta web das chaves do Redis local.
+- Outbox no PostgreSQL para publicação confiável de eventos.
 - Serviço temporário de migrations para criar ou atualizar o schema do PostgreSQL.
 - Worker de consolidação para consumir eventos do RabbitMQ e atualizar o saldo diário.
 
@@ -220,8 +223,10 @@ Esse comando executa o fluxo completo:
 O Docker Compose pode iniciar alguns serviços independentes em paralelo. As dependências importantes ficam controladas no compose:
 
 1. O serviço `migrations` só executa depois que o PostgreSQL está saudável.
-2. A API só sobe depois que o PostgreSQL está saudável, o RabbitMQ está saudável, o Redis está saudável e o serviço `migrations` terminou com sucesso.
+2. A API só sobe depois que o PostgreSQL está saudável e o serviço `migrations` terminou com sucesso.
 3. O worker só sobe depois que o PostgreSQL está saudável, o RabbitMQ está saudável e o serviço `migrations` terminou com sucesso.
+
+A API não depende do RabbitMQ para iniciar. Se o RabbitMQ estiver temporariamente indisponível, os eventos ficam pendentes na tabela `outbox_messages` e são publicados quando o canal de mensageria voltar.
 
 O container `cash-flow-migrations` termina após aplicar as migrations. Isso é esperado. Ele não é uma aplicação contínua.
 
@@ -373,6 +378,7 @@ financial_entries
 daily_balances
 daily_balance_processed_events
 idempotency_records
+outbox_messages
 ```
 
 O endpoint `POST /entries` aceita o header opcional `Idempotency-Key`.
@@ -381,7 +387,9 @@ O endpoint `POST /entries` aceita o header opcional `Idempotency-Key`.
 - Com `Idempotency-Key`, repetir a mesma chave com o mesmo conteúdo retorna o lançamento já criado e não duplica o registro.
 - Reutilizar a mesma chave com conteúdo diferente retorna `409 Conflict`.
 
-Ao criar um lançamento, a API publica o evento `EntryCreated` no RabbitMQ.
+Ao criar um lançamento, a API grava o evento `EntryCreated` na tabela `outbox_messages` no PostgreSQL. Uma rotina em segundo plano lê mensagens pendentes da Outbox e publica no RabbitMQ.
+
+Esse desenho reduz o risco de o lançamento ser salvo sem que o evento de consolidação seja publicado.
 
 Configuração local da mensageria:
 
@@ -402,6 +410,14 @@ A pasta `data/` é ignorada pelo Git porque contém dados locais de execução.
 Esse arquivo local existe apenas para manter o endpoint manual de consolidação funcionando durante a evolução do desafio.
 
 Após cadastrar um lançamento, a fila `cash-flow.entry-created` deve aparecer no RabbitMQ Management.
+
+Também é possível validar a Outbox pelo Adminer consultando a tabela:
+
+```text
+outbox_messages
+```
+
+Mensagens ainda não publicadas ficam com `processed_at` vazio. Após publicação com sucesso no RabbitMQ, `processed_at` é preenchido.
 
 Para validar no painel:
 
@@ -630,8 +646,7 @@ As próximas entregas devem evoluir o repositório em partes pequenas e commitá
 
 1. Evoluir a autenticação local por API Key para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
 2. Implementar autorização por escopo, perfil ou recurso.
-3. Evoluir publicação de eventos para padrão Outbox.
-4. Adicionar política de retentativas e fila de erro no RabbitMQ.
-5. Evoluir retry e observabilidade da atualização de cache após consolidação.
-6. Criar testes de integração com PostgreSQL, RabbitMQ e Redis em containers.
-7. Detalhar observabilidade com logs estruturados, métricas, tracing e health checks de dependências.
+3. Adicionar política avançada de retentativas e fila de erro para Outbox/RabbitMQ.
+4. Evoluir retry e observabilidade da atualização de cache após consolidação.
+5. Criar testes de integração com PostgreSQL, RabbitMQ e Redis em containers.
+6. Detalhar observabilidade com logs estruturados, métricas, tracing e health checks de dependências.

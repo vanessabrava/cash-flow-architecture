@@ -67,7 +67,7 @@ Nessa evolução:
 - contratos públicos de eventos e APIs poderiam ficar em um projeto próprio;
 - regras de aplicação ficariam separadas das tecnologias de infraestrutura;
 - implementações PostgreSQL e RabbitMQ poderiam evoluir de forma independente;
-- a publicação de eventos deveria evoluir para Outbox ou mecanismo equivalente.
+- a publicação confiável de eventos continuaria baseada em Outbox, conforme ADR 0007.
 
 ## Consequências Positivas
 

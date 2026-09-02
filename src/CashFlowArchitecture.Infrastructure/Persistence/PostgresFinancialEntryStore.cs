@@ -17,7 +17,6 @@ public sealed class PostgresFinancialEntryStore(CashFlowDbContext dbContext) : I
             CreatedAt = entry.CreatedAt
         });
 
-        dbContext.SaveChanges();
     }
 
     public IReadOnlyCollection<FinancialEntry> GetByDate(DateOnly entryDate)
