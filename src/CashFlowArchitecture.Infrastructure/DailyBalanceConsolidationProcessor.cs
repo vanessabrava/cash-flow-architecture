@@ -6,7 +6,8 @@ namespace CashFlowArchitecture.Infrastructure;
 
 public sealed class DailyBalanceConsolidationProcessor(
     FileIntegrationEventStore integrationEventStore,
-    IDailyBalanceStore dailyBalanceStore)
+    IDailyBalanceStore dailyBalanceStore,
+    IDailyBalanceCache dailyBalanceCache)
 {
     public ConsolidationResult ProcessPendingEvents()
     {
@@ -16,8 +17,11 @@ public sealed class DailyBalanceConsolidationProcessor(
 
         foreach (var integrationEvent in integrationEventStore.GetAll())
         {
-            if (dailyBalanceStore.Apply(integrationEvent))
+            var updatedBalance = dailyBalanceStore.Apply(integrationEvent);
+
+            if (updatedBalance is not null)
             {
+                dailyBalanceCache.Set(updatedBalance);
                 processedEvents++;
                 updatedBalanceDates.Add(integrationEvent.Data.EntryDate);
             }

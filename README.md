@@ -6,6 +6,7 @@
 ![C%23](https://img.shields.io/badge/C%23-13-239120)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1)
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-4-FF6600)
+![Redis](https://img.shields.io/badge/Redis-8-DC382D)
 
 Este repositório documenta uma proposta de arquitetura de solução para uma plataforma de controle de fluxo de caixa, com foco em lançamentos financeiros e consolidação diária de saldo.
 
@@ -27,7 +28,9 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   │   ├── 0001-separar-lancamentos-e-consolidacao.md
 │   │   ├── 0002-processar-consolidacao-de-forma-assincrona.md
 │   │   ├── 0003-usar-idempotency-key-na-criacao-de-lancamentos.md
-│   │   └── 0004-modularizar-api-worker-core-e-infrastructure.md
+│   │   ├── 0004-modularizar-api-worker-core-e-infrastructure.md
+│   │   ├── 0005-usar-api-key-local-para-protecao-inicial.md
+│   │   └── 0006-usar-redis-para-cache-de-saldo-diario.md
 │   ├── 01-contexto-e-objetivo.md
 │   ├── 02-requisitos-iniciais.md
 │   ├── 03-premissas-restricoes-e-decisoes.md
@@ -68,6 +71,8 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 - [ADR 0002 - Processar consolidação de forma assíncrona](docs/adr/0002-processar-consolidacao-de-forma-assincrona.md)
 - [ADR 0003 - Usar Idempotency-Key na criação de lançamentos](docs/adr/0003-usar-idempotency-key-na-criacao-de-lancamentos.md)
 - [ADR 0004 - Modularizar API, Worker, Core e Infrastructure](docs/adr/0004-modularizar-api-worker-core-e-infrastructure.md)
+- [ADR 0005 - Usar API Key local para proteção inicial](docs/adr/0005-usar-api-key-local-para-protecao-inicial.md)
+- [ADR 0006 - Usar Redis para cache de saldo diário](docs/adr/0006-usar-redis-para-cache-de-saldo-diario.md)
 
 ## Idioma do Projeto
 
@@ -118,6 +123,7 @@ O arquivo `compose.yaml` prepara a aplicação e os serviços necessários para 
 - PostgreSQL 17 para persistência relacional.
 - Adminer para consulta web do PostgreSQL local.
 - RabbitMQ 4 com painel de gerenciamento para mensageria.
+- Redis 8 para cache de consultas de saldo diário consolidado.
 - Serviço temporário de migrations para criar ou atualizar o schema do PostgreSQL.
 - Worker de consolidação para consumir eventos do RabbitMQ e atualizar o saldo diário.
 
@@ -133,10 +139,10 @@ cp .env.example .env
 
 O arquivo `.env` guarda portas e credenciais locais de desenvolvimento. Ele é ignorado pelo Git.
 
-Passo 2: subir PostgreSQL, Adminer e RabbitMQ.
+Passo 2: subir PostgreSQL, Adminer, RabbitMQ e Redis.
 
 ```bash
-docker compose up -d postgres adminer rabbitmq
+docker compose up -d postgres adminer rabbitmq redis
 ```
 
 Esse comando sobe apenas as dependências externas da API.
@@ -202,17 +208,18 @@ Esse comando executa o fluxo completo:
 3. Constrói a imagem do serviço de migrations.
 4. Sobe o PostgreSQL.
 5. Aguarda o PostgreSQL ficar saudável.
-6. Executa o container temporário `cash-flow-migrations`.
-7. Aplica as migrations do EF Core no banco `cash_flow`.
-8. Sobe o RabbitMQ.
-9. Sobe o Adminer.
-10. Sobe a API em container.
-11. Sobe o worker de consolidação em container separado.
+6. Sobe o Redis.
+7. Executa o container temporário `cash-flow-migrations`.
+8. Aplica as migrations do EF Core no banco `cash_flow`.
+9. Sobe o RabbitMQ.
+10. Sobe o Adminer.
+11. Sobe a API em container.
+12. Sobe o worker de consolidação em container separado.
 
 O Docker Compose pode iniciar alguns serviços independentes em paralelo. As dependências importantes ficam controladas no compose:
 
 1. O serviço `migrations` só executa depois que o PostgreSQL está saudável.
-2. A API só sobe depois que o PostgreSQL está saudável, o RabbitMQ está saudável e o serviço `migrations` terminou com sucesso.
+2. A API só sobe depois que o PostgreSQL está saudável, o RabbitMQ está saudável, o Redis está saudável e o serviço `migrations` terminou com sucesso.
 3. O worker só sobe depois que o PostgreSQL está saudável, o RabbitMQ está saudável e o serviço `migrations` terminou com sucesso.
 
 O container `cash-flow-migrations` termina após aplicar as migrations. Isso é esperado. Ele não é uma aplicação contínua.
@@ -223,7 +230,7 @@ Passo 3: validar se os serviços subiram.
 docker compose ps
 ```
 
-O PostgreSQL e o RabbitMQ devem aparecer como saudáveis. A API e o worker de consolidação devem aparecer em execução.
+O PostgreSQL, o RabbitMQ e o Redis devem aparecer como saudáveis. A API e o worker de consolidação devem aparecer em execução.
 
 Passo 4: acessar a aplicação e as ferramentas locais.
 
@@ -233,6 +240,7 @@ Serviços disponíveis:
 API Swagger: http://localhost:5099/swagger
 PostgreSQL: localhost:5432
 Adminer: http://localhost:8080
+Redis: localhost:6379
 RabbitMQ: localhost:5672
 RabbitMQ Management: http://localhost:15672
 ```
@@ -247,6 +255,15 @@ Credenciais locais padrão:
 | --- | --- | --- |
 | PostgreSQL | `cash_flow_user` | `cash_flow_password` |
 | RabbitMQ Management | `cash_flow_user` | `cash_flow_password` |
+| Redis | Não se aplica | `cash_flow_redis_password` |
+
+Chave local padrão da API:
+
+```text
+X-Api-Key: cash_flow_local_api_key
+```
+
+A chave acima é apenas para desenvolvimento local. Em ambientes reais, ela deve ser substituída por uma estratégia de autenticação e autorização adequada, como OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
 
 Para acessar o PostgreSQL pelo Adminer, abra `http://localhost:8080` e preencha os campos exatamente assim:
 
@@ -266,10 +283,22 @@ Connection string para a API executando fora do Docker, por exemplo via terminal
 Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password
 ```
 
+Connection string do Redis para a API executando fora do Docker:
+
+```text
+localhost:6379,password=cash_flow_redis_password,abortConnect=false
+```
+
 Connection string para um serviço executando dentro da mesma rede do Docker Compose:
 
 ```text
 Host=postgres;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password
+```
+
+Connection string do Redis para um serviço executando dentro da mesma rede do Docker Compose:
+
+```text
+redis:6379,password=cash_flow_redis_password,abortConnect=false
 ```
 
 Para parar os serviços:
@@ -309,6 +338,8 @@ Endpoint inicial disponível:
 GET /health
 ```
 
+O endpoint de saúde é público para facilitar verificação de disponibilidade local.
+
 Documentação navegável da API em ambiente de desenvolvimento:
 
 ```text
@@ -323,6 +354,14 @@ GET /entries?date=2026-09-01
 POST /daily-balances/process-events
 GET /daily-balances/2026-09-01
 ```
+
+Os endpoints de negócio exigem o header:
+
+```http
+X-Api-Key: cash_flow_local_api_key
+```
+
+No Swagger, clique em `Authorize`, informe `cash_flow_local_api_key` e confirme. Depois disso, o Swagger envia o header `X-Api-Key` automaticamente nas chamadas protegidas.
 
 Nesta implementação, os lançamentos financeiros e os saldos consolidados são persistidos no PostgreSQL local por meio de EF Core.
 
@@ -370,6 +409,22 @@ Para validar no painel:
 5. Verifique se o contador de publicações aumentou após chamar `POST /entries`.
 
 O worker `cash-flow-consolidation-worker` consome essa fila e atualiza o saldo consolidado no PostgreSQL.
+
+O Redis é usado como cache de leitura para o endpoint:
+
+```http
+GET /daily-balances/2026-09-01
+```
+
+O PostgreSQL continua sendo a fonte da verdade. O fluxo esperado é:
+
+1. O worker consolida o saldo no PostgreSQL.
+2. Após consolidar, o worker atualiza o Redis com o saldo atualizado.
+3. A API consulta Redis primeiro ao receber `GET /daily-balances/{date}`.
+4. Se o saldo não estiver no Redis, a API consulta o PostgreSQL.
+5. Se o Redis estiver indisponível, a API continua consultando o PostgreSQL.
+
+O TTL inicial do cache é de 15 minutos. Ele existe como proteção operacional para evitar saldo antigo preso indefinidamente se houver falha entre PostgreSQL e Redis. A atualização principal do cache acontece na consolidação, não pela expiração.
 
 Para validar a independência entre API e consolidação:
 
@@ -487,7 +542,11 @@ Arquivo `.vscode/launch.json`:
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:5099",
+        "Authentication__ApiKey": "cash_flow_local_api_key",
         "ConnectionStrings__Postgres": "Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password",
+        "ConnectionStrings__Redis": "localhost:6379,password=cash_flow_redis_password,abortConnect=false",
+        "Redis__InstanceName": "cash-flow:",
+        "Redis__DailyBalanceTtlMinutes": "15",
         "DOTNET_ROOT": "/usr/local/share/dotnet",
         "PATH": "/usr/local/share/dotnet:/usr/local/bin:/opt/homebrew/bin:${env:PATH}"
       },
@@ -519,6 +578,12 @@ Para validar a saúde da API:
 GET http://localhost:5099/health
 ```
 
+Para validar um endpoint protegido, informe o header `X-Api-Key`:
+
+```bash
+curl -H "X-Api-Key: cash_flow_local_api_key" "http://localhost:5099/entries?date=2026-09-01"
+```
+
 Se o VS Code exibir erro como `dotnet: command not found` ao depurar, o problema é que o VS Code não encontrou o SDK do .NET no PATH usado pela extensão. Confirme o caminho com `which dotnet`, atualize `.vscode/settings.json`, `.vscode/tasks.json` e `.vscode/launch.json`, depois feche e abra o VS Code novamente.
 
 No macOS, se o erro continuar mesmo com os arquivos `.vscode` configurados, abra o VS Code pelo terminal dentro da pasta do projeto:
@@ -533,8 +598,10 @@ Isso faz o VS Code herdar o mesmo PATH do terminal. Outra alternativa é criar u
 
 As próximas entregas devem evoluir o repositório em partes pequenas e commitáveis, por exemplo:
 
-1. Implementar autenticação e autorização nos endpoints.
-2. Evoluir publicação de eventos para padrão Outbox.
-3. Adicionar política de retentativas e fila de erro no RabbitMQ.
-4. Criar testes de integração com PostgreSQL e RabbitMQ em containers.
-5. Detalhar observabilidade com logs estruturados, métricas, tracing e health checks de dependências.
+1. Evoluir a autenticação local por API Key para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
+2. Implementar autorização por escopo, perfil ou recurso.
+3. Evoluir publicação de eventos para padrão Outbox.
+4. Adicionar política de retentativas e fila de erro no RabbitMQ.
+5. Evoluir retry e observabilidade da atualização de cache após consolidação.
+6. Criar testes de integração com PostgreSQL, RabbitMQ e Redis em containers.
+7. Detalhar observabilidade com logs estruturados, métricas, tracing e health checks de dependências.

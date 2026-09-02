@@ -8,7 +8,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}
+      Authentication__ApiKey: "${API_KEY:-cash_flow_local_api_key}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:-cash_flow_redis_password},abortConnect=false"
+      Redis__InstanceName: "cash-flow:"
       RabbitMq__HostName: rabbitmq
       RabbitMq__Port: 5672
       RabbitMq__UserName: ${RABBITMQ_DEFAULT_USER:-cash_flow_user}
@@ -23,6 +26,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       migrations:
         condition: service_completed_successfully
 
@@ -35,7 +40,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:-cash_flow_redis_password},abortConnect=false"
+      Redis__InstanceName: "cash-flow:"
+      Redis__DailyBalanceTtlMinutes: "${REDIS_DAILY_BALANCE_TTL_MINUTES:-15}"
       RabbitMq__HostName: rabbitmq
       RabbitMq__Port: 5672
       RabbitMq__UserName: ${RABBITMQ_DEFAULT_USER:-cash_flow_user}
@@ -48,6 +56,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       migrations:
         condition: service_completed_successfully
 
@@ -59,7 +69,7 @@ services:
     container_name: cash-flow-migrations
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -92,6 +102,20 @@ services:
       postgres:
         condition: service_healthy
 
+  redis:
+    image: redis:8-alpine
+    container_name: cash-flow-redis
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-cash_flow_redis_password}"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-cash_flow_redis_password}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   rabbitmq:
     image: rabbitmq:4-management-alpine
     container_name: cash-flow-rabbitmq
@@ -112,3 +136,4 @@ services:
 volumes:
   postgres_data:
   rabbitmq_data:
+  redis_data:

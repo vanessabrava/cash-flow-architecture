@@ -11,10 +11,59 @@ Este documento descreve os contratos HTTP definidos para as capacidades principa
 - Nomes de campos de API serão escritos em inglês.
 - O ID interno do banco de dados não será exposto nas APIs.
 - O ID interno será usado apenas para índices, chaves internas e relacionamentos na persistência.
+- Endpoints de negócio devem exigir autenticação.
+- A autenticação local desta etapa usa o header `X-Api-Key`.
 - Requisições devem aceitar o header `X-Correlation-Id` para rastreabilidade ponta a ponta.
 - Quando o consumidor não enviar `X-Correlation-Id`, a API deve gerar um novo `correlationId`.
 - Respostas devem retornar o `correlationId` para facilitar diagnóstico e suporte.
 - A criação de lançamentos deve aceitar o header `Idempotency-Key` para evitar duplicidade causada por retry do consumidor.
+
+## Autenticação
+
+Nesta etapa, os endpoints de negócio exigem uma API Key enviada no header `X-Api-Key`.
+
+Exemplo:
+
+```http
+X-Api-Key: cash_flow_local_api_key
+```
+
+Essa chave é uma proteção inicial para execução local e demonstração do desafio. Ela não representa a estratégia definitiva para produção.
+
+Em uma evolução real da solução, a autenticação e autorização devem avançar para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço, com escopos e permissões por recurso.
+
+### Endpoints Públicos
+
+| Endpoint | Motivo |
+| --- | --- |
+| `GET /health` | Permite verificar disponibilidade básica da aplicação. |
+| `/swagger` | Permite testar a API em ambiente de desenvolvimento. |
+
+### Endpoints Protegidos
+
+| Endpoint | Autenticação |
+| --- | --- |
+| `POST /entries` | Requer `X-Api-Key`. |
+| `GET /entries?date=YYYY-MM-DD` | Requer `X-Api-Key`. |
+| `POST /daily-balances/process-events` | Requer `X-Api-Key`. |
+| `GET /daily-balances/{date}` | Requer `X-Api-Key`. |
+
+### Erro de Autenticação
+
+Quando o header não for informado ou a chave for inválida, a API deve retornar:
+
+```http
+401 Unauthorized
+```
+
+```json
+{
+  "correlationId": "4a11b94c-45b7-4a48-9cb4-917ecf2c7f31",
+  "code": "AUTHENTICATION_REQUIRED",
+  "message": "Informe uma API Key válida para acessar este recurso.",
+  "details": []
+}
+```
 
 ## Rastreabilidade
 
@@ -47,10 +96,12 @@ POST /entries
 ```http
 X-Correlation-Id: 4a11b94c-45b7-4a48-9cb4-917ecf2c7f31
 Idempotency-Key: 8d7f7d9c-6b3b-4a0c-8f7a-123456789abc
+X-Api-Key: cash_flow_local_api_key
 ```
 
 | Header | Obrigatório | Descrição |
 | --- | --- | --- |
+| X-Api-Key | Sim | Chave de autenticação local para acessar endpoints de negócio. |
 | X-Correlation-Id | Não | Identificador de rastreabilidade técnica da requisição. |
 | Idempotency-Key | Não | Identificador da tentativa lógica de criação. Quando repetido, deve retornar o lançamento já criado sem duplicar o registro. |
 

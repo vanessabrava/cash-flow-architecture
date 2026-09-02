@@ -14,6 +14,9 @@ A solução deve continuar aceitando lançamentos financeiros mesmo quando a con
 | Falha ao atualizar saldo consolidado | Saldo da data pode ficar desatualizado ou com status de falha. | Registrar erro, permitir nova tentativa e preservar os lançamentos originais. |
 | Duplicidade no processamento de evento | Saldo pode ser calculado incorretamente se o evento for aplicado mais de uma vez. | Prever processamento idempotente na consolidação. |
 | Retry duplicado na criação de lançamento | O mesmo lançamento pode ser registrado mais de uma vez por timeout, clique duplicado ou retry automático. | Aceitar `Idempotency-Key` no `POST /entries` para reaproveitar o resultado da primeira criação. |
+| Requisição sem autenticação | Consumidor não autorizado pode tentar acessar endpoints de negócio. | Exigir `X-Api-Key` nos endpoints protegidos e registrar tentativas negadas sem expor a chave. |
+| Redis indisponível | Consulta de saldo pode perder ganho de performance. | Tratar cache como dependência opcional e consultar PostgreSQL diretamente em caso de falha. |
+| Cache defasado | Consulta pode retornar saldo consolidado anterior se a atualização do Redis falhar após a consolidação no PostgreSQL. | Atualizar o Redis no processamento da consolidação e manter TTL de 15 minutos como proteção operacional. |
 | Lentidão no canal de eventos | Atraso entre lançamento e saldo consolidado. | Monitorar fila, atraso de consumo e volume pendente. |
 | Erro de validação no lançamento | Lançamento não deve ser registrado. | Retornar erro claro para o consumidor da API. |
 
@@ -54,6 +57,18 @@ Como a consolidação é assíncrona, o saldo consultado pode não refletir imed
 
 Esse comportamento deve ser tratado como parte da arquitetura, e não como erro, desde que o atraso seja monitorado e permaneça dentro de limites aceitáveis.
 
+### Cache de Leitura
+
+A consulta de saldo diário consolidado usa Redis como cache de leitura. A API tenta ler o saldo no cache antes de consultar o PostgreSQL.
+
+A atualização principal do cache acontece no processamento de consolidação: depois de aplicar o evento no PostgreSQL, o worker grava o saldo atualizado no Redis. O endpoint manual de processamento também atualiza o cache enquanto existir como apoio de desenvolvimento.
+
+Quando a API não encontra o saldo no Redis e encontra o saldo consolidado no PostgreSQL, ela grava uma cópia no cache. Esse comportamento cobre cache miss e recriação do cache após reinício do Redis.
+
+O cache não é fonte da verdade. Se o Redis falhar, a API registra o problema e consulta o PostgreSQL diretamente.
+
+O TTL inicial é de 15 minutos. Ele existe para limitar o risco de cache antigo preso em caso de falha operacional, não para ser o mecanismo principal de atualização do saldo.
+
 ## Logs
 
 Os logs devem permitir rastrear as principais operações da solução.
@@ -66,6 +81,8 @@ Os logs devem permitir rastrear as principais operações da solução.
 | Processamento de consolidação | `correlationId`, `eventUid`, `entryUid`, data consolidada e resultado do processamento. |
 | Falha de consolidação | `correlationId`, `eventUid`, `entryUid`, motivo da falha e tentativa de processamento. |
 | Consulta de saldo | `correlationId`, data solicitada, status do saldo e momento da consulta. |
+| Falha de autenticação | `correlationId`, rota, método HTTP e status retornado, sem registrar o valor da API Key. |
+| Falha de cache | `correlationId`, chave lógica do cache, operação de leitura ou escrita e fallback usado. |
 
 Os logs não devem expor dados sensíveis desnecessários nem identificadores internos do banco.
 
@@ -99,6 +116,9 @@ Métricas sugeridas para acompanhar a saúde da solução:
 | Requisições sem `correlationId` recebido | Avaliar maturidade dos consumidores e necessidade de geração interna. |
 | Reutilização de `Idempotency-Key` | Acompanhar retries e possíveis problemas de comunicação com consumidores. |
 | Conflitos de `Idempotency-Key` | Identificar reutilização incorreta da mesma chave para payload diferente. |
+| Respostas `401 Unauthorized` | Acompanhar tentativas sem autenticação ou com credenciais inválidas. |
+| Taxa de acerto do cache | Medir efetividade do Redis nas consultas de saldo. |
+| Falhas de leitura ou escrita no cache | Identificar instabilidade do Redis sem confundir com falha da API. |
 
 ## Health Checks
 
@@ -119,6 +139,8 @@ Alertas devem ser considerados para situações que afetam a operação:
 - atraso elevado entre criação do lançamento e consolidação;
 - erro recorrente ao persistir saldo consolidado;
 - indisponibilidade da API de Lançamentos;
+- aumento anormal de respostas `401 Unauthorized`;
+- aumento de falhas de leitura ou escrita no Redis;
 - aumento de respostas `500 Internal Server Error`.
 
 ## Relação com Requisitos Não Funcionais
@@ -135,6 +157,9 @@ Esta estratégia apoia principalmente os seguintes requisitos:
 ## Pontos Para Evolução
 
 - Evoluir a separação atual para projetos mais granulares de aplicação, domínio, contratos e infraestrutura específica quando o domínio crescer.
+- Evoluir autenticação por API Key local para OAuth2, OpenID Connect, JWT, API Gateway ou identidade serviço-a-serviço.
+- Definir autorização por escopo, perfil ou recurso.
+- Evoluir invalidação do cache após consolidação.
 - Evoluir a publicação para padrão Outbox antes de produção.
 - Definir política de retentativas.
 - Definir estratégia de fila de erro.

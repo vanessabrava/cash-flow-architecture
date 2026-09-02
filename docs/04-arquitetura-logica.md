@@ -19,6 +19,8 @@ flowchart LR
     EventChannel --> ConsolidationWorker[Processador de Consolidação]
     ConsolidationWorker --> BalanceStore[(Base de Saldos Consolidados)]
 
+    BalanceApi --> BalanceCache[(Cache de Saldos)]
+    BalanceCache --> BalanceApi
     BalanceApi --> BalanceStore
 ```
 
@@ -31,6 +33,7 @@ flowchart LR
 | Canal de Eventos | Desacoplar o registro de lançamentos do processamento de consolidação. |
 | Processador de Consolidação | Consumir eventos de lançamentos e atualizar o saldo diário consolidado. |
 | Base de Saldos Consolidados | Armazenar o resultado consolidado por data para consulta eficiente. |
+| Cache de Saldos | Armazenar temporariamente consultas de saldo consolidado para reduzir leitura repetida no banco. |
 | API de Consulta de Saldo | Disponibilizar a consulta do saldo diário consolidado. |
 
 ## Fluxo de Registro de Lançamento
@@ -51,8 +54,11 @@ flowchart LR
 ## Fluxo de Consulta de Saldo
 
 1. O comerciante solicita o saldo consolidado de uma data.
-2. A API de Consulta de Saldo busca o saldo na Base de Saldos Consolidados.
-3. A API retorna o saldo disponível para a data solicitada.
+2. A API de Consulta de Saldo tenta buscar o saldo no Cache de Saldos.
+3. Se houver cache válido, a API retorna o saldo sem consultar o banco.
+4. Se não houver cache válido, a API busca o saldo na Base de Saldos Consolidados.
+5. Quando o saldo consolidado existir e não estiver no cache, a API grava uma cópia temporária no cache.
+6. A API retorna o saldo disponível para a data solicitada.
 
 ## Independência Entre Lançamento e Consolidação
 
@@ -66,6 +72,10 @@ Como a consolidação pode acontecer de forma assíncrona, a consulta de saldo p
 
 Essa característica precisa ser comunicada na solução e tratada com observabilidade, reprocessamento e rastreabilidade.
 
+O worker de consolidação atualiza o cache sempre que consolidar um saldo com sucesso. A API também recria o cache quando houver cache miss e o saldo existir no PostgreSQL.
+
+O cache de saldos possui TTL de 15 minutos como proteção operacional. Ele não substitui o PostgreSQL como fonte da verdade.
+
 ## Detalhamentos Registrados
 
 Esta visão lógica foi detalhada nos seguintes documentos:
@@ -74,6 +84,7 @@ Esta visão lógica foi detalhada nos seguintes documentos:
 - Contratos de API.
 - Modelo de dados.
 - Estratégia de mensageria com RabbitMQ.
+- Estratégia de cache com Redis.
 - Estratégia de resiliência e observabilidade.
 - Estratégia de testes.
 - Guia de execução local no README.
@@ -84,6 +95,7 @@ Esta visão lógica foi detalhada nos seguintes documentos:
 | --- | --- | --- |
 | API | .NET com C# | Projeto `CashFlowArchitecture.Api`, responsável pelos contratos HTTP e regras de entrada. |
 | Persistência | PostgreSQL | Banco relacional para lançamentos, saldos consolidados, eventos processados e idempotência. |
+| Cache | Redis | Cache temporário para consultas de saldo diário consolidado. |
 | Consulta local de dados | Adminer | Interface web local para inspecionar o PostgreSQL durante o desenvolvimento. |
 | Mensageria | RabbitMQ | Canal de publicação de eventos como `EntryCreated`. |
 | Worker de consolidação | .NET Worker Service | Projeto `CashFlowArchitecture.Worker`, responsável por consumir eventos do RabbitMQ e atualizar o saldo diário consolidado. |
@@ -104,3 +116,5 @@ A implementação foi organizada em projetos separados por responsabilidade:
 Essa separação evita que o worker dependa diretamente da API e deixa mais claro que os dois serviços executáveis podem subir, parar e escalar separadamente.
 
 A decisão está registrada na [ADR 0004](adr/0004-modularizar-api-worker-core-e-infrastructure.md).
+
+A decisão de cache com Redis está registrada na [ADR 0006](adr/0006-usar-redis-para-cache-de-saldo-diario.md).

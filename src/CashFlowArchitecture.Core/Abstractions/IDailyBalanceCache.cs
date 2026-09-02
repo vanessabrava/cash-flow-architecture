@@ -1,11 +1,10 @@
 using CashFlowArchitecture.Core.Domain.DailyBalances;
-using CashFlowArchitecture.Core.Domain.Events;
 
 namespace CashFlowArchitecture.Core.Abstractions;
 
-public interface IDailyBalanceStore
+public interface IDailyBalanceCache
 {
     DailyBalance? GetByDate(DateOnly balanceDate);
 
-    DailyBalance? Apply(EntryCreatedEvent integrationEvent);
+    void Set(DailyBalance balance);
 }

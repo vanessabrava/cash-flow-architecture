@@ -25,9 +25,24 @@ internal static class DailyBalanceEndpoints
     private static IResult GetByDate(
         DateOnly date,
         HttpContext httpContext,
-        IDailyBalanceStore store)
+        IDailyBalanceStore store,
+        IDailyBalanceCache cache)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
+        var cachedBalance = cache.GetByDate(date);
+
+        if (cachedBalance is not null)
+        {
+            return Results.Ok(new DailyBalanceResponse(
+                correlationId,
+                cachedBalance.BalanceDate,
+                cachedBalance.TotalCredits,
+                cachedBalance.TotalDebits,
+                cachedBalance.Balance,
+                cachedBalance.Status,
+                cachedBalance.UpdatedAt));
+        }
+
         var balance = store.GetByDate(date);
 
         if (balance is null)
@@ -38,8 +53,10 @@ internal static class DailyBalanceEndpoints
                     correlationId,
                     date,
                     "PENDING",
-                    "Saldo diario ainda nao consolidado."));
+                "Saldo diario ainda nao consolidado."));
         }
+
+        cache.Set(balance);
 
         return Results.Ok(new DailyBalanceResponse(
             correlationId,

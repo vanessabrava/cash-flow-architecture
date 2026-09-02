@@ -15,6 +15,9 @@ A estratégia de testes deve garantir que:
 - falhas de consolidação possam ser diagnosticadas e reprocessadas;
 - contratos públicos não exponham IDs internos do banco de dados.
 - `correlationId` seja retornado e propagado entre API, eventos e consolidação.
+- endpoints de negócio rejeitem requisições sem autenticação.
+- consultas de saldo consolidado possam ser atendidas pelo cache sem depender sempre do banco;
+- consolidação atualize o cache após atualizar o saldo no PostgreSQL.
 
 ## Pirâmide de Testes
 
@@ -50,9 +53,13 @@ Testes de API devem validar contratos HTTP, payloads e códigos de resposta.
 | `POST /entries` | Retornar erro de conflito quando a mesma `Idempotency-Key` for reutilizada com payload diferente. |
 | `POST /entries` | Retornar `400 Bad Request` para valor inválido. |
 | `POST /entries` | Retornar `400 Bad Request` para tipo inválido. |
+| `POST /entries` | Retornar `401 Unauthorized` quando `X-Api-Key` não for informada ou for inválida. |
 | `GET /entries?date=YYYY-MM-DD` | Retornar lançamentos da data solicitada. |
+| `GET /entries?date=YYYY-MM-DD` | Retornar `401 Unauthorized` quando `X-Api-Key` não for informada ou for inválida. |
 | `GET /daily-balances/{date}` | Retornar `200 OK` quando o saldo estiver consolidado. |
 | `GET /daily-balances/{date}` | Retornar `202 Accepted` quando o saldo ainda estiver pendente. |
+| `GET /daily-balances/{date}` | Reutilizar cache quando o saldo consolidado já tiver sido consultado. |
+| `GET /health` | Retornar `200 OK` sem exigir API Key. |
 
 As respostas públicas devem retornar `uid`, `entryUid` ou `eventUid` quando necessário. O campo `id` interno não deve aparecer em respostas públicas.
 
@@ -68,6 +75,8 @@ Testes de integração devem validar a comunicação entre componentes.
 | API de Lançamentos e canal de eventos | Publicar evento após criação de lançamento. |
 | Processador de Consolidação e canal de eventos | Consumir evento e atualizar saldo da data. |
 | Processador de Consolidação e base de saldos | Persistir totais de crédito, débito e saldo final. |
+| API de Consulta de Saldo e Redis | Armazenar e recuperar saldo consolidado em cache. |
+| Processador de Consolidação e Redis | Atualizar cache depois de consolidar o saldo diário. |
 | Rastreabilidade entre componentes | Propagar o mesmo `correlationId` da requisição para o evento e para os logs de consolidação. |
 
 ## Testes de Resiliência
@@ -79,6 +88,7 @@ Testes de resiliência devem validar o comportamento da solução em falhas prev
 | Consolidação indisponível | API de Lançamentos continua registrando novos lançamentos. |
 | Retry duplicado no `POST /entries` | API retorna o lançamento já criado sem duplicar o registro quando `Idempotency-Key` é repetida. |
 | Evento processado mais de uma vez | Saldo consolidado não é duplicado. |
+| Redis indisponível | API continua consultando saldo no PostgreSQL. |
 | Falha ao persistir saldo | Erro é registrado e evento pode ser reprocessado. |
 | Atraso no processamento | Saldo pode ficar pendente, mas o atraso deve ser observável. |
 
@@ -116,6 +126,8 @@ Testes end-to-end devem cobrir apenas jornadas essenciais.
 ## Pontos Para Evolução
 
 - Ampliar cobertura para testes de integração com PostgreSQL e RabbitMQ reais em containers.
+- Evoluir testes de autenticação quando a estratégia mudar de API Key local para OAuth2, OpenID Connect, JWT ou identidade serviço-a-serviço.
+- Adicionar testes de integração com Redis real em container.
 - Definir cobertura mínima esperada para aprovação de Pull Request.
 - Adicionar testes automatizados específicos para o worker de consolidação.
 - Validar comportamento de retentativa e fila de erro quando essa estratégia for implementada.

@@ -71,13 +71,19 @@ public sealed class RabbitMqDailyBalanceWorker(
 
                 using var scope = scopeFactory.CreateScope();
                 var dailyBalanceStore = scope.ServiceProvider.GetRequiredService<IDailyBalanceStore>();
-                var processed = dailyBalanceStore.Apply(integrationEvent);
+                var dailyBalanceCache = scope.ServiceProvider.GetRequiredService<IDailyBalanceCache>();
+                var updatedBalance = dailyBalanceStore.Apply(integrationEvent);
+
+                if (updatedBalance is not null)
+                {
+                    dailyBalanceCache.Set(updatedBalance);
+                }
 
                 logger.LogInformation(
                     "EntryCreated event consumed. EventUid: {EventUid}. CorrelationId: {CorrelationId}. Processed: {Processed}.",
                     integrationEvent.EventUid,
                     integrationEvent.CorrelationId,
-                    processed);
+                    updatedBalance is not null);
 
                 await channel.BasicAckAsync(args.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
             }

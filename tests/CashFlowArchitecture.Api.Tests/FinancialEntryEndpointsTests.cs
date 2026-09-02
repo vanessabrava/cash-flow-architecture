@@ -22,11 +22,12 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
     private readonly string idempotencyRecordsFilePath = Path.Combine(
         Path.GetTempPath(),
         $"cash-flow-idempotency-{Guid.NewGuid()}.json");
+    private readonly WebApplicationFactory<Program> factory;
     private readonly HttpClient client;
 
     public FinancialEntryEndpointsTests()
     {
-        var factory = new WebApplicationFactory<Program>()
+        factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.UseEnvironment("Testing");
@@ -34,6 +35,7 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
                 {
                     configuration.AddInMemoryCollection(new Dictionary<string, string?>
                     {
+                        ["Authentication:ApiKey"] = "test-api-key",
                         ["Storage:UseFileStorage"] = "true",
                         ["Storage:FinancialEntriesPath"] = entriesFilePath,
                         ["Storage:IntegrationEventsPath"] = integrationEventsFilePath,
@@ -44,6 +46,30 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
             });
 
         client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", "test-api-key");
+    }
+
+    [Fact]
+    public async Task Health_ReturnsOkWithoutApiKey()
+    {
+        using var unauthenticatedClient = factory.CreateClient();
+
+        using var response = await unauthenticatedClient.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task BusinessEndpoint_ReturnsUnauthorizedWithoutApiKey()
+    {
+        using var unauthenticatedClient = factory.CreateClient();
+
+        using var response = await unauthenticatedClient.GetAsync("/entries?date=2026-09-01");
+        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("AUTHENTICATION_REQUIRED", body.RootElement.GetProperty("code").GetString());
+        Assert.True(response.Headers.Contains("X-Correlation-Id"));
     }
 
     [Fact]
@@ -235,6 +261,7 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         Assert.True(paths.TryGetProperty("/daily-balances/process-events", out _));
 
         Assert.True(HasStringEntryTypeSchema(body.RootElement));
+        Assert.True(HasApiKeySecurityScheme(body.RootElement));
     }
 
     [Fact]
@@ -327,9 +354,36 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         Assert.Equal(150.75m, balanceBody.RootElement.GetProperty("balance").GetDecimal());
     }
 
+    [Fact]
+    public async Task GetDailyBalanceByDate_ReturnsCachedConsolidatedBalance()
+    {
+        await client.PostAsJsonAsync("/entries", new
+        {
+            type = "CREDIT",
+            amount = 150.75m,
+            description = "Venda no cartao",
+            entryDate = "2026-09-01"
+        });
+        await client.PostAsync("/daily-balances/process-events", null);
+
+        using var firstResponse = await client.GetAsync("/daily-balances/2026-09-01");
+        using var firstBody = await JsonDocument.ParseAsync(await firstResponse.Content.ReadAsStreamAsync());
+
+        await File.WriteAllTextAsync(dailyBalancesFilePath, "[]");
+
+        using var secondResponse = await client.GetAsync("/daily-balances/2026-09-01");
+        using var secondBody = await JsonDocument.ParseAsync(await secondResponse.Content.ReadAsStreamAsync());
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        Assert.Equal(150.75m, firstBody.RootElement.GetProperty("balance").GetDecimal());
+        Assert.Equal(150.75m, secondBody.RootElement.GetProperty("balance").GetDecimal());
+    }
+
     public void Dispose()
     {
         client.Dispose();
+        factory.Dispose();
 
         if (File.Exists(entriesFilePath))
         {
@@ -381,5 +435,15 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         }
 
         return false;
+    }
+
+    private static bool HasApiKeySecurityScheme(JsonElement document)
+    {
+        return document.TryGetProperty("components", out var components)
+            && components.TryGetProperty("securitySchemes", out var securitySchemes)
+            && securitySchemes.TryGetProperty("ApiKey", out var apiKey)
+            && apiKey.GetProperty("type").GetString() == "apiKey"
+            && apiKey.GetProperty("name").GetString() == "X-Api-Key"
+            && apiKey.GetProperty("in").GetString() == "header";
     }
 }

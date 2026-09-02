@@ -23,13 +23,13 @@ Propor uma arquitetura que permita:
 
 ## Escopo Atual
 
-O repositório já contém documentação arquitetural, decisões registradas em ADRs, implementação inicial da API, persistência em PostgreSQL, publicação de eventos no RabbitMQ, worker assíncrono de consolidação, Docker Compose e pipeline de CI.
+O repositório já contém documentação arquitetural, decisões registradas em ADRs, implementação inicial da API, proteção local por API Key, persistência em PostgreSQL, cache de leitura com Redis, publicação de eventos no RabbitMQ, worker assíncrono de consolidação, Docker Compose e pipeline de CI.
 
 ## Fora do Escopo Atual
 
 Para manter a evolução do projeto organizada, o escopo atual ainda não cobre:
 
-- Autenticação e autorização.
+- Autenticação e autorização completas para produção.
 - Padrão Outbox para garantir atomicidade entre gravação no banco e publicação de evento.
 - Fila de erro para mensagens que falharem repetidamente.
 - Observabilidade completa com dashboards, métricas e tracing distribuído.

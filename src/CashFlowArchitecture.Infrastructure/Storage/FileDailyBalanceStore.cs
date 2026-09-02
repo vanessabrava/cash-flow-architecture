@@ -38,7 +38,7 @@ public sealed class FileDailyBalanceStore : IDailyBalanceStore
         }
     }
 
-    public bool Apply(EntryCreatedEvent integrationEvent)
+    public DailyBalance? Apply(EntryCreatedEvent integrationEvent)
     {
         lock (syncRoot)
         {
@@ -48,7 +48,7 @@ public sealed class FileDailyBalanceStore : IDailyBalanceStore
 
             if (currentBalance?.ProcessedEventUids.Contains(integrationEvent.EventUid) == true)
             {
-                return false;
+                return null;
             }
 
             var processedEventUids = currentBalance?.ProcessedEventUids.ToList() ?? [];
@@ -79,7 +79,7 @@ public sealed class FileDailyBalanceStore : IDailyBalanceStore
             balances.Add(updatedBalance);
             Save(balances.OrderBy(balance => balance.BalanceDate).ToArray());
 
-            return true;
+            return updatedBalance;
         }
     }
 

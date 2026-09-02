@@ -16,7 +16,7 @@ public sealed class PostgresDailyBalanceStore(CashFlowDbContext dbContext) : IDa
             ?.ToDomain();
     }
 
-    public bool Apply(EntryCreatedEvent integrationEvent)
+    public DailyBalance? Apply(EntryCreatedEvent integrationEvent)
     {
         var currentBalance = dbContext.DailyBalances
             .Include(balance => balance.ProcessedEvents)
@@ -25,7 +25,7 @@ public sealed class PostgresDailyBalanceStore(CashFlowDbContext dbContext) : IDa
         if (currentBalance?.ProcessedEvents.Any(processedEvent =>
             processedEvent.EventUid == integrationEvent.EventUid) == true)
         {
-            return false;
+            return null;
         }
 
         currentBalance ??= new DailyBalanceEntity
@@ -57,7 +57,7 @@ public sealed class PostgresDailyBalanceStore(CashFlowDbContext dbContext) : IDa
 
         dbContext.SaveChanges();
 
-        return true;
+        return currentBalance.ToDomain();
     }
 }
 
