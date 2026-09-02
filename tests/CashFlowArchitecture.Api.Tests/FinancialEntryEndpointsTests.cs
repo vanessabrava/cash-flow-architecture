@@ -26,10 +26,12 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         var factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
+                builder.UseEnvironment("Testing");
                 builder.ConfigureAppConfiguration((_, configuration) =>
                 {
                     configuration.AddInMemoryCollection(new Dictionary<string, string?>
                     {
+                        ["Storage:UseFileStorage"] = "true",
                         ["Storage:FinancialEntriesPath"] = entriesFilePath,
                         ["Storage:IntegrationEventsPath"] = integrationEventsFilePath,
                         ["Storage:DailyBalancesPath"] = dailyBalancesFilePath

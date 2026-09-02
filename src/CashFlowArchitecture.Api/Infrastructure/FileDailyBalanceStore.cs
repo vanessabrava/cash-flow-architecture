@@ -6,7 +6,7 @@ using CashFlowArchitecture.Api.Domain.Events;
 
 namespace CashFlowArchitecture.Api.Infrastructure;
 
-internal sealed class FileDailyBalanceStore
+internal sealed class FileDailyBalanceStore : IDailyBalanceStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

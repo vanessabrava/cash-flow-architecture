@@ -27,7 +27,7 @@ internal static class FinancialEntryEndpoints
     private static IResult Create(
         CreateFinancialEntryRequest request,
         HttpContext httpContext,
-        FileFinancialEntryStore store,
+        IFinancialEntryStore store,
         FileIntegrationEventStore eventStore)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
@@ -68,7 +68,7 @@ internal static class FinancialEntryEndpoints
     private static IResult GetByDate(
         DateOnly date,
         HttpContext httpContext,
-        FileFinancialEntryStore store)
+        IFinancialEntryStore store)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
         var items = store.GetByDate(date)

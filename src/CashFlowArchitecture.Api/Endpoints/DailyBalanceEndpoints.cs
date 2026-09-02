@@ -24,7 +24,7 @@ internal static class DailyBalanceEndpoints
     private static IResult GetByDate(
         DateOnly date,
         HttpContext httpContext,
-        FileDailyBalanceStore store)
+        IDailyBalanceStore store)
     {
         var correlationId = CorrelationId.GetOrCreate(httpContext);
         var balance = store.GetByDate(date);

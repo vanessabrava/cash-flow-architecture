@@ -4,7 +4,7 @@ using CashFlowArchitecture.Api.Domain.Entries;
 
 namespace CashFlowArchitecture.Api.Infrastructure;
 
-internal sealed class FileFinancialEntryStore
+internal sealed class FileFinancialEntryStore : IFinancialEntryStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

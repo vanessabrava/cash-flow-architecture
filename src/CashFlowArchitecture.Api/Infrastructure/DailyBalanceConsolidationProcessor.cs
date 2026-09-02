@@ -4,7 +4,7 @@ namespace CashFlowArchitecture.Api.Infrastructure;
 
 internal sealed class DailyBalanceConsolidationProcessor(
     FileIntegrationEventStore integrationEventStore,
-    FileDailyBalanceStore dailyBalanceStore)
+    IDailyBalanceStore dailyBalanceStore)
 {
     public ConsolidationResult ProcessPendingEvents()
     {

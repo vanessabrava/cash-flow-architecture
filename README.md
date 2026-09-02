@@ -100,22 +100,113 @@ dotnet test CashFlowArchitecture.slnx --collect:"XPlat Code Coverage" --results-
 
 ### Infraestrutura Local
 
-O arquivo `compose.yaml` prepara os serviços planejados para a evolução da arquitetura:
+O arquivo `compose.yaml` prepara a aplicação e os serviços planejados para a evolução da arquitetura:
 
+- API .NET exposta localmente com Swagger.
 - PostgreSQL 17 para persistência relacional.
 - Adminer para consulta web do PostgreSQL local.
 - RabbitMQ 4 com painel de gerenciamento para mensageria.
+- Serviço temporário de migrations para criar ou atualizar o schema do PostgreSQL.
 
-Para subir a infraestrutura local:
+#### Opção 1: executar infraestrutura no Docker e API pelo terminal ou F5
+
+Use esta opção quando quiser depurar a API pelo Visual Studio Code.
+
+Passo 1: criar o arquivo local de variáveis de ambiente.
 
 ```bash
 cp .env.example .env
-docker compose up -d
 ```
+
+O arquivo `.env` guarda portas e credenciais locais de desenvolvimento. Ele é ignorado pelo Git.
+
+Passo 2: subir PostgreSQL, Adminer e RabbitMQ.
+
+```bash
+docker compose up -d postgres adminer rabbitmq
+```
+
+Esse comando sobe apenas as dependências externas da API.
+
+Passo 3: restaurar as ferramentas locais do .NET.
+
+```bash
+dotnet tool restore
+```
+
+Esse comando instala as ferramentas declaradas em `dotnet-tools.json`, incluindo `dotnet-ef`.
+
+Passo 4: criar ou atualizar as tabelas no PostgreSQL local.
+
+```bash
+dotnet tool run dotnet-ef database update --project src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj --startup-project src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj
+```
+
+Esse comando aplica as migrations do EF Core no banco `cash_flow`.
+
+Passo 5: executar a API pelo terminal ou pelo F5 do VS Code.
+
+```bash
+dotnet run --project src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj
+```
+
+Depois acesse:
+
+```text
+Swagger: http://localhost:5099/swagger
+```
+
+#### Opção 2: executar tudo pelo Docker Compose
+
+Use esta opção quando quiser subir a aplicação inteira sem usar F5.
+
+Passo 1: criar o arquivo local de variáveis de ambiente.
+
+```bash
+cp .env.example .env
+```
+
+O arquivo `.env` guarda portas e credenciais locais de desenvolvimento. Ele é ignorado pelo Git.
+
+Passo 2: construir as imagens e subir todos os serviços.
+
+```bash
+docker compose up -d --build
+```
+
+Esse comando executa o fluxo completo:
+
+1. Constrói a imagem da API.
+2. Constrói a imagem do serviço de migrations.
+3. Sobe o PostgreSQL.
+4. Aguarda o PostgreSQL ficar saudável.
+5. Executa o container temporário `cash-flow-migrations`.
+6. Aplica as migrations do EF Core no banco `cash_flow`.
+7. Sobe o RabbitMQ.
+8. Sobe o Adminer.
+9. Sobe a API em container.
+
+O Docker Compose pode iniciar alguns serviços independentes em paralelo. As dependências importantes ficam controladas no compose:
+
+1. O serviço `migrations` só executa depois que o PostgreSQL está saudável.
+2. A API só sobe depois que o PostgreSQL está saudável, o RabbitMQ está saudável e o serviço `migrations` terminou com sucesso.
+
+O container `cash-flow-migrations` termina após aplicar as migrations. Isso é esperado. Ele não é uma aplicação contínua.
+
+Passo 3: validar se os serviços subiram.
+
+```bash
+docker compose ps
+```
+
+O PostgreSQL e o RabbitMQ devem aparecer como saudáveis. A API deve aparecer em execução.
+
+Passo 4: acessar a aplicação e as ferramentas locais.
 
 Serviços disponíveis:
 
 ```text
+API Swagger: http://localhost:5099/swagger
 PostgreSQL: localhost:5432
 Adminer: http://localhost:8080
 RabbitMQ: localhost:5672
@@ -163,6 +254,14 @@ Para parar os serviços:
 docker compose down
 ```
 
+Para parar os serviços e apagar os volumes locais do PostgreSQL e RabbitMQ:
+
+```bash
+docker compose down -v
+```
+
+Use `docker compose down -v` apenas quando quiser limpar os dados locais e recriar o ambiente do zero.
+
 ## Pipeline
 
 O repositório possui um workflow do GitHub Actions em `.github/workflows/ci.yml`.
@@ -201,25 +300,21 @@ POST /daily-balances/process-events
 GET /daily-balances/2026-09-01
 ```
 
-Nesta implementação, os lançamentos são persistidos localmente em arquivo JSON:
+Nesta implementação, os lançamentos financeiros e os saldos consolidados são persistidos no PostgreSQL local por meio de EF Core.
 
 ```text
-src/CashFlowArchitecture.Api/data/financial-entries.json
+financial_entries
+daily_balances
+daily_balance_processed_events
 ```
 
-Ao criar um lançamento, a API também registra um evento local `EntryCreated`:
+Ao criar um lançamento, a API ainda registra um evento local `EntryCreated` em arquivo JSON:
 
 ```text
 src/CashFlowArchitecture.Api/data/integration-events.json
 ```
 
-Ao processar os eventos, a API atualiza a visão local de saldo consolidado:
-
-```text
-src/CashFlowArchitecture.Api/data/daily-balances.json
-```
-
-A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A evolução planejada é substituir a persistência local por PostgreSQL com EF Core e substituir o arquivo de eventos por RabbitMQ.
+A pasta `data/` é ignorada pelo Git porque contém dados locais de execução. A evolução planejada é substituir o arquivo de eventos por RabbitMQ.
 
 ### Visual Studio Code
 

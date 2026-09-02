@@ -1,7 +1,9 @@
 using CashFlowArchitecture.Api.Endpoints;
 using CashFlowArchitecture.Api.Domain.Entries;
 using CashFlowArchitecture.Api.Infrastructure;
+using CashFlowArchitecture.Api.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -12,10 +14,23 @@ builder.Services.Configure<JsonOptions>(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
-builder.Services.AddSingleton<FileFinancialEntryStore>();
 builder.Services.AddSingleton<FileIntegrationEventStore>();
-builder.Services.AddSingleton<FileDailyBalanceStore>();
-builder.Services.AddSingleton<DailyBalanceConsolidationProcessor>();
+
+if (builder.Environment.IsEnvironment("Testing")
+    || builder.Configuration.GetValue("Storage:UseFileStorage", false))
+{
+    builder.Services.AddSingleton<IFinancialEntryStore, FileFinancialEntryStore>();
+    builder.Services.AddSingleton<IDailyBalanceStore, FileDailyBalanceStore>();
+}
+else
+{
+    builder.Services.AddDbContext<CashFlowDbContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
+    builder.Services.AddScoped<IFinancialEntryStore, PostgresFinancialEntryStore>();
+    builder.Services.AddScoped<IDailyBalanceStore, PostgresDailyBalanceStore>();
+}
+
+builder.Services.AddScoped<DailyBalanceConsolidationProcessor>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -32,7 +47,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();

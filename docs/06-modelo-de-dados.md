@@ -1,6 +1,8 @@
 # Modelo de Dados
 
-Este documento descreve o modelo de dados conceitual da solução. A proposta ainda não define uma tecnologia de banco de dados, mas organiza as informações que precisam existir para suportar lançamentos financeiros e saldo diário consolidado.
+Este documento descreve o modelo de dados da solução para suportar lançamentos financeiros e saldo diário consolidado.
+
+Na implementação atual, a persistência relacional usa PostgreSQL com EF Core. Eventos de integração ainda são registrados localmente em arquivo JSON até a evolução para RabbitMQ.
 
 ## Diretriz de Identificação
 
@@ -51,6 +53,16 @@ Representa o saldo consolidado de uma data específica.
 | status | texto | Sim | Estado da consolidação: `PENDING`, `CONSOLIDATED` ou `FAILED`. |
 | updatedAt | data/hora | Sim | Data e hora da última atualização da consolidação. |
 
+## Entidade: DailyBalanceProcessedEvent
+
+Representa o controle interno de eventos já aplicados ao saldo consolidado. Essa tabela evita que o mesmo evento atualize o saldo mais de uma vez.
+
+| Campo | Tipo Conceitual | Obrigatório | Descrição |
+| --- | --- | --- | --- |
+| id | inteiro | Sim | Identificador interno do banco de dados. |
+| dailyBalanceId | inteiro | Sim | Relacionamento interno com o saldo diário consolidado. |
+| eventUid | GUID | Sim | UID público do evento já processado. |
+
 ## Regras da Entidade DailyBalance
 
 - Deve existir no máximo um saldo consolidado por data de referência.
@@ -98,6 +110,14 @@ erDiagram
         string status
         datetime updatedAt
     }
+
+    DAILY_BALANCE_PROCESSED_EVENT {
+        int id
+        int dailyBalanceId
+        guid eventUid
+    }
+
+    DAILY_BALANCE ||--o{ DAILY_BALANCE_PROCESSED_EVENT : controla
 ```
 
 O relacionamento entre lançamentos e saldo diário é derivado pela data de referência. O saldo consolidado não substitui os lançamentos originais; ele resume os lançamentos para consulta eficiente.
@@ -112,9 +132,10 @@ O relacionamento entre lançamentos e saldo diário é derivado pela data de ref
 | DailyBalance | id | Chave interna do banco. |
 | DailyBalance | uid | Consulta por identificador público, se necessário. |
 | DailyBalance | balanceDate | Consulta do saldo consolidado por data. |
+| DailyBalanceProcessedEvent | id | Chave interna do banco. |
+| DailyBalanceProcessedEvent | eventUid | Garantia de idempotência no processamento de eventos. |
 
 ## Observações
 
-- A escolha entre banco relacional, banco NoSQL ou combinação de tecnologias será feita em etapa posterior.
 - O modelo pode evoluir para incluir comerciante, conta, categoria, status de processamento e auditoria.
 - A primeira versão mantém o modelo reduzido para focar no desafio principal: lançamento financeiro e consolidação diária.
