@@ -24,7 +24,7 @@ Nesta etapa da implementação, a API grava eventos `EntryCreated` em uma Outbox
 
 O worker `cash-flow-consolidation-worker` roda a partir do projeto `CashFlowArchitecture.Worker`, consome a fila `cash-flow.entry-created` e atualiza o saldo diário consolidado no PostgreSQL.
 
-A API mantém uma cópia local temporária dos eventos quando executada no modo de armazenamento em arquivo, permitindo o processamento manual pelo endpoint `POST /daily-balances/process-events` durante a evolução do desafio.
+A API de lançamentos pode manter uma cópia local temporária dos eventos quando executada no modo de armazenamento em arquivo. A API de consolidação permite o processamento manual pelo endpoint `POST /daily-balances/process-events` durante a evolução do desafio, desde que a configuração aponte para o mesmo arquivo de eventos.
 
 ## Consequências Positivas
 

@@ -1,4 +1,4 @@
-namespace CashFlowArchitecture.Api.Contracts.DailyBalances;
+namespace CashFlowArchitecture.Consolidation.Api.Contracts.DailyBalances;
 
 internal sealed record PendingDailyBalanceResponse(
     string CorrelationId,

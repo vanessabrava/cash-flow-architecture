@@ -6,9 +6,10 @@ Aceita
 
 ## Contexto
 
-A solução possui duas capacidades executáveis principais:
+A solução possui três capacidades executáveis principais:
 
-- API de lançamentos e consulta de saldo;
+- API de lançamentos;
+- API de consulta de saldo consolidado;
 - worker de consolidação assíncrona.
 
 Essas capacidades devem poder evoluir, escalar e falhar de forma independente. Ao mesmo tempo, ambas usam conceitos comuns do domínio, como lançamento financeiro, saldo diário e evento `EntryCreated`.
@@ -17,20 +18,23 @@ No início da implementação, o worker chegou a referenciar o projeto da API pa
 
 ## Decisão
 
-Separar a solution em quatro projetos:
+Separar a solution em cinco projetos de produção:
 
 | Projeto | Responsabilidade |
 | --- | --- |
-| `CashFlowArchitecture.Api` | Expor contratos HTTP, Swagger e endpoints da aplicação. |
+| `CashFlowArchitecture.Api` | Expor contratos HTTP, Swagger e endpoints de lançamentos. |
+| `CashFlowArchitecture.Consolidation.Api` | Expor contratos HTTP, Swagger e endpoints de saldo diário consolidado. |
 | `CashFlowArchitecture.Worker` | Executar o processo assíncrono de consolidação consumindo RabbitMQ. |
-| `CashFlowArchitecture.Core` | Concentrar domínio e abstrações compartilhadas entre API, worker e infraestrutura. |
+| `CashFlowArchitecture.Core` | Concentrar domínio e abstrações compartilhadas entre APIs, worker e infraestrutura. |
 | `CashFlowArchitecture.Infrastructure` | Implementar persistência PostgreSQL, EF Core, mensageria RabbitMQ e armazenamento local de apoio. |
 
 Com essa organização:
 
-- a API não depende do worker;
+- a API de lançamentos não depende da API de consolidação;
+- a API de lançamentos não depende do worker;
+- a API de consolidação não depende da API de lançamentos;
 - o worker não depende da API;
-- ambos dependem de contratos de domínio e abstrações no `Core`;
+- os serviços executáveis dependem de contratos de domínio e abstrações no `Core`;
 - detalhes técnicos ficam isolados em `Infrastructure`.
 
 ## Abordagem Não Aplicada
@@ -63,7 +67,6 @@ src/
 
 Nessa evolução:
 
-- a API de lançamentos poderia ficar separada da API de consulta de saldo;
 - contratos públicos de eventos e APIs poderiam ficar em um projeto próprio;
 - regras de aplicação ficariam separadas das tecnologias de infraestrutura;
 - implementações PostgreSQL e RabbitMQ poderiam evoluir de forma independente;

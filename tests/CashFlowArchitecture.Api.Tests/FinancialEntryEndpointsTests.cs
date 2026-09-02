@@ -16,9 +16,6 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
     private readonly string integrationEventsFilePath = Path.Combine(
         Path.GetTempPath(),
         $"cash-flow-events-{Guid.NewGuid()}.json");
-    private readonly string dailyBalancesFilePath = Path.Combine(
-        Path.GetTempPath(),
-        $"cash-flow-balances-{Guid.NewGuid()}.json");
     private readonly string idempotencyRecordsFilePath = Path.Combine(
         Path.GetTempPath(),
         $"cash-flow-idempotency-{Guid.NewGuid()}.json");
@@ -39,7 +36,6 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
                         ["Storage:UseFileStorage"] = "true",
                         ["Storage:FinancialEntriesPath"] = entriesFilePath,
                         ["Storage:IntegrationEventsPath"] = integrationEventsFilePath,
-                        ["Storage:DailyBalancesPath"] = dailyBalancesFilePath,
                         ["Storage:IdempotencyRecordsPath"] = idempotencyRecordsFilePath
                     });
                 });
@@ -294,127 +290,9 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         Assert.True(paths.TryGetProperty("/health/live", out _));
         Assert.True(paths.TryGetProperty("/health/ready", out _));
         Assert.True(paths.TryGetProperty("/entries", out _));
-        Assert.True(paths.TryGetProperty("/daily-balances/{date}", out _));
-        Assert.True(paths.TryGetProperty("/daily-balances/process-events", out _));
 
         Assert.True(HasStringEntryTypeSchema(body.RootElement));
         Assert.True(HasApiKeySecurityScheme(body.RootElement));
-    }
-
-    [Fact]
-    public async Task GetDailyBalanceByDate_ReturnsPendingWhenEventsWereNotProcessed()
-    {
-        await client.PostAsJsonAsync("/entries", new
-        {
-            type = "CREDIT",
-            amount = 150.75m,
-            description = "Venda no cartao",
-            entryDate = "2026-09-01"
-        });
-
-        using var response = await client.GetAsync("/daily-balances/2026-09-01");
-        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
-
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.Equal("2026-09-01", body.RootElement.GetProperty("date").GetString());
-        Assert.Equal("PENDING", body.RootElement.GetProperty("status").GetString());
-    }
-
-    [Fact]
-    public async Task GetDailyBalanceByDate_ReturnsConsolidatedBalance()
-    {
-        await client.PostAsJsonAsync("/entries", new
-        {
-            type = "CREDIT",
-            amount = 150.75m,
-            description = "Venda no cartao",
-            entryDate = "2026-09-01"
-        });
-        await client.PostAsJsonAsync("/entries", new
-        {
-            type = "DEBIT",
-            amount = 40.00m,
-            description = "Pagamento de fornecedor",
-            entryDate = "2026-09-01"
-        });
-
-        using var processRequest = new HttpRequestMessage(HttpMethod.Post, "/daily-balances/process-events");
-        processRequest.Headers.Add("X-Correlation-Id", "process-correlation-123");
-
-        using var processResponse = await client.SendAsync(processRequest);
-        using var processBody = await JsonDocument.ParseAsync(await processResponse.Content.ReadAsStreamAsync());
-
-        Assert.Equal(HttpStatusCode.OK, processResponse.StatusCode);
-        Assert.Equal("process-correlation-123", processBody.RootElement.GetProperty("correlationId").GetString());
-        Assert.Equal(2, processBody.RootElement.GetProperty("processedEvents").GetInt32());
-        Assert.Equal(0, processBody.RootElement.GetProperty("skippedEvents").GetInt32());
-        Assert.Equal(1, processBody.RootElement.GetProperty("updatedBalances").GetInt32());
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/daily-balances/2026-09-01");
-        request.Headers.Add("X-Correlation-Id", "balance-correlation-123");
-
-        using var response = await client.SendAsync(request);
-        using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("balance-correlation-123", response.Headers.GetValues("X-Correlation-Id").Single());
-        Assert.Equal("balance-correlation-123", body.RootElement.GetProperty("correlationId").GetString());
-        Assert.Equal("2026-09-01", body.RootElement.GetProperty("date").GetString());
-        Assert.Equal(150.75m, body.RootElement.GetProperty("totalCredits").GetDecimal());
-        Assert.Equal(40.00m, body.RootElement.GetProperty("totalDebits").GetDecimal());
-        Assert.Equal(110.75m, body.RootElement.GetProperty("balance").GetDecimal());
-        Assert.Equal("CONSOLIDATED", body.RootElement.GetProperty("status").GetString());
-        Assert.False(body.RootElement.TryGetProperty("id", out _));
-    }
-
-    [Fact]
-    public async Task ProcessEvents_IsIdempotent()
-    {
-        await client.PostAsJsonAsync("/entries", new
-        {
-            type = "CREDIT",
-            amount = 150.75m,
-            description = "Venda no cartao",
-            entryDate = "2026-09-01"
-        });
-
-        using var firstProcessResponse = await client.PostAsync("/daily-balances/process-events", null);
-        using var secondProcessResponse = await client.PostAsync("/daily-balances/process-events", null);
-        using var secondProcessBody = await JsonDocument.ParseAsync(await secondProcessResponse.Content.ReadAsStreamAsync());
-        using var balanceResponse = await client.GetAsync("/daily-balances/2026-09-01");
-        using var balanceBody = await JsonDocument.ParseAsync(await balanceResponse.Content.ReadAsStreamAsync());
-
-        Assert.Equal(HttpStatusCode.OK, firstProcessResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, secondProcessResponse.StatusCode);
-        Assert.Equal(0, secondProcessBody.RootElement.GetProperty("processedEvents").GetInt32());
-        Assert.Equal(1, secondProcessBody.RootElement.GetProperty("skippedEvents").GetInt32());
-        Assert.Equal(150.75m, balanceBody.RootElement.GetProperty("balance").GetDecimal());
-    }
-
-    [Fact]
-    public async Task GetDailyBalanceByDate_ReturnsCachedConsolidatedBalance()
-    {
-        await client.PostAsJsonAsync("/entries", new
-        {
-            type = "CREDIT",
-            amount = 150.75m,
-            description = "Venda no cartao",
-            entryDate = "2026-09-01"
-        });
-        await client.PostAsync("/daily-balances/process-events", null);
-
-        using var firstResponse = await client.GetAsync("/daily-balances/2026-09-01");
-        using var firstBody = await JsonDocument.ParseAsync(await firstResponse.Content.ReadAsStreamAsync());
-
-        await File.WriteAllTextAsync(dailyBalancesFilePath, "[]");
-
-        using var secondResponse = await client.GetAsync("/daily-balances/2026-09-01");
-        using var secondBody = await JsonDocument.ParseAsync(await secondResponse.Content.ReadAsStreamAsync());
-
-        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
-        Assert.Equal(150.75m, firstBody.RootElement.GetProperty("balance").GetDecimal());
-        Assert.Equal(150.75m, secondBody.RootElement.GetProperty("balance").GetDecimal());
     }
 
     public void Dispose()
@@ -430,11 +308,6 @@ public sealed class FinancialEntryEndpointsTests : IDisposable
         if (File.Exists(integrationEventsFilePath))
         {
             File.Delete(integrationEventsFilePath);
-        }
-
-        if (File.Exists(dailyBalancesFilePath))
-        {
-            File.Delete(dailyBalancesFilePath);
         }
 
         if (File.Exists(idempotencyRecordsFilePath))

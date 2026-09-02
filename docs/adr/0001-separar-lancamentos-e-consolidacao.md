@@ -14,9 +14,19 @@ Se o registro de lançamentos e a consolidação diária forem tratados como uma
 
 ## Decisão
 
-Separar logicamente o domínio de lançamentos financeiros do domínio de consolidação diária.
+Separar logicamente e operacionalmente o domínio de lançamentos financeiros do domínio de consolidação diária.
 
 O registro de lançamentos será tratado como a fonte principal dos dados financeiros. A consolidação será tratada como uma visão derivada, calculada a partir dos lançamentos registrados.
+
+Na implementação do desafio, a separação aparece em três processos executáveis:
+
+| Serviço | Projeto | Responsabilidade |
+| --- | --- | --- |
+| API de Lançamentos | `CashFlowArchitecture.Api` | Registrar e consultar lançamentos financeiros. |
+| API de Saldo Consolidado | `CashFlowArchitecture.Consolidation.Api` | Consultar saldo diário consolidado. |
+| Worker de Consolidação | `CashFlowArchitecture.Worker` | Consumir eventos e atualizar o saldo consolidado. |
+
+No Docker Compose, cada processo sobe em um container separado. Assim, a API de lançamentos pode continuar respondendo mesmo se a API de saldo ou o worker de consolidação estiverem indisponíveis.
 
 ## Consequências Positivas
 
@@ -24,6 +34,7 @@ O registro de lançamentos será tratado como a fonte principal dos dados financ
 - Permite manter o registro de lançamentos disponível mesmo quando a consolidação falhar.
 - Facilita reprocessamento do saldo consolidado a partir dos lançamentos originais.
 - Torna a solução mais clara para evolução futura em serviços separados.
+- Permite demonstrar a independência operacional parando apenas o container de consolidação.
 
 ## Consequências Negativas
 

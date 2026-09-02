@@ -98,7 +98,8 @@ Esta visão lógica foi detalhada nos seguintes documentos:
 
 | Componente | Tecnologia | Observação |
 | --- | --- | --- |
-| API | .NET com C# | Projeto `CashFlowArchitecture.Api`, responsável pelos contratos HTTP e regras de entrada. |
+| API de Lançamentos | .NET com C# | Projeto `CashFlowArchitecture.Api`, responsável pelo registro e consulta de lançamentos. |
+| API de Consulta de Saldo | .NET com C# | Projeto `CashFlowArchitecture.Consolidation.Api`, responsável pela consulta de saldo consolidado. |
 | Persistência | PostgreSQL | Banco relacional para lançamentos, saldos consolidados, eventos processados e idempotência. |
 | Outbox | PostgreSQL | Tabela `outbox_messages` para publicação confiável de eventos. |
 | Cache | Redis | Cache temporário para consultas de saldo diário consolidado. |
@@ -107,7 +108,7 @@ Esta visão lógica foi detalhada nos seguintes documentos:
 | Mensageria | RabbitMQ | Canal de publicação de eventos como `EntryCreated`. |
 | Worker de consolidação | .NET Worker Service | Projeto `CashFlowArchitecture.Worker`, responsável por consumir eventos do RabbitMQ e atualizar o saldo diário consolidado. |
 | Migrations | EF Core Migrations | Criação e evolução controlada do schema do PostgreSQL. |
-| Execução local | Docker Compose | Facilita subir a API e suas dependências no ambiente de desenvolvimento. |
+| Execução local | Docker Compose | Facilita subir as APIs, worker e dependências no ambiente de desenvolvimento. |
 
 ## Organização da Solution
 
@@ -115,12 +116,21 @@ A implementação foi organizada em projetos separados por responsabilidade:
 
 | Projeto | Papel na solução |
 | --- | --- |
-| `CashFlowArchitecture.Api` | Host HTTP da aplicação, endpoints, Swagger e contratos de entrada/saída. |
+| `CashFlowArchitecture.Api` | Host HTTP da API de Lançamentos, endpoints de lançamentos, Swagger e publicação via Outbox. |
+| `CashFlowArchitecture.Consolidation.Api` | Host HTTP da API de Consulta de Saldo, endpoints de saldo diário, Swagger e leitura com Redis/PostgreSQL. |
 | `CashFlowArchitecture.Worker` | Host do processamento assíncrono de consolidação. |
 | `CashFlowArchitecture.Core` | Domínio e abstrações compartilhadas, sem dependência de tecnologia externa. |
 | `CashFlowArchitecture.Infrastructure` | Implementações de banco de dados, migrations, mensageria e armazenamento local de apoio. |
 
-Essa separação evita que o worker dependa diretamente da API e deixa mais claro que os dois serviços executáveis podem subir, parar e escalar separadamente.
+Essa separação evita que o worker dependa diretamente da API e deixa claro que os três serviços executáveis podem subir, parar e escalar separadamente.
+
+No Docker Compose, essa separação aparece como containers distintos:
+
+| Container | Responsabilidade |
+| --- | --- |
+| `cash-flow-entries-api` | Registrar e consultar lançamentos financeiros. |
+| `cash-flow-consolidation-api` | Consultar saldo diário consolidado. |
+| `cash-flow-consolidation-worker` | Consumir eventos e atualizar saldos consolidados. |
 
 A decisão está registrada na [ADR 0004](adr/0004-modularizar-api-worker-core-e-infrastructure.md).
 

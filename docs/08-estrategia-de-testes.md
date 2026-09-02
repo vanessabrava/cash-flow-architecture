@@ -57,9 +57,9 @@ Testes de API devem validar contratos HTTP, payloads e códigos de resposta.
 | `POST /entries` | Retornar `401 Unauthorized` quando `X-Api-Key` não for informada ou for inválida. |
 | `GET /entries?date=YYYY-MM-DD` | Retornar lançamentos da data solicitada. |
 | `GET /entries?date=YYYY-MM-DD` | Retornar `401 Unauthorized` quando `X-Api-Key` não for informada ou for inválida. |
-| `GET /daily-balances/{date}` | Retornar `200 OK` quando o saldo estiver consolidado. |
-| `GET /daily-balances/{date}` | Retornar `202 Accepted` quando o saldo ainda estiver pendente. |
-| `GET /daily-balances/{date}` | Reutilizar cache quando o saldo consolidado já tiver sido consultado. |
+| `GET /daily-balances/{date}` na API de consolidação | Retornar `200 OK` quando o saldo estiver consolidado. |
+| `GET /daily-balances/{date}` na API de consolidação | Retornar `202 Accepted` quando o saldo ainda estiver pendente. |
+| `GET /daily-balances/{date}` na API de consolidação | Reutilizar cache quando o saldo consolidado já tiver sido consultado. |
 | `GET /health` | Retornar `200 OK` sem exigir API Key. |
 | `GET /health/live` | Retornar `200 OK` sem exigir API Key. |
 | `GET /health/ready` | Retornar dependências avaliadas e `503 Service Unavailable` quando uma dependência crítica falhar. |

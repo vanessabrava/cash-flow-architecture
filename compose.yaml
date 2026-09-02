@@ -1,17 +1,15 @@
 services:
-  api:
+  entries-api:
     build:
       context: .
       dockerfile: src/CashFlowArchitecture.Api/Dockerfile
       target: runtime
-    container_name: cash-flow-api
+    container_name: cash-flow-entries-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       Authentication__ApiKey: "${API_KEY:-cash_flow_local_api_key}"
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password};GSS Encryption Mode=Disable"
-      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:-cash_flow_redis_password},abortConnect=false"
-      Redis__InstanceName: "cash-flow:"
       Outbox__BatchSize: "${OUTBOX_BATCH_SIZE:-20}"
       Outbox__MaxRetryCount: "${OUTBOX_MAX_RETRY_COUNT:-5}"
       Outbox__RetryDelaySeconds: "${OUTBOX_RETRY_DELAY_SECONDS:-30}"
@@ -24,9 +22,33 @@ services:
       RabbitMq__Queue: ${RABBITMQ_ENTRY_CREATED_QUEUE:-cash-flow.entry-created}
       RabbitMq__RoutingKey: ${RABBITMQ_ENTRY_CREATED_ROUTING_KEY:-entry.created}
     ports:
-      - "${API_PORT:-5099}:8080"
+      - "${ENTRIES_API_PORT:-5099}:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+
+  consolidation-api:
+    build:
+      context: .
+      dockerfile: src/CashFlowArchitecture.Consolidation.Api/Dockerfile
+      target: runtime
+    container_name: cash-flow-consolidation-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Authentication__ApiKey: "${API_KEY:-cash_flow_local_api_key}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-cash_flow};Username=${POSTGRES_USER:-cash_flow_user};Password=${POSTGRES_PASSWORD:-cash_flow_password};GSS Encryption Mode=Disable"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:-cash_flow_redis_password},abortConnect=false"
+      Redis__InstanceName: "cash-flow:"
+      Redis__DailyBalanceTtlMinutes: "${REDIS_DAILY_BALANCE_TTL_MINUTES:-15}"
+    ports:
+      - "${CONSOLIDATION_API_PORT:-5100}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully

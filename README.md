@@ -48,6 +48,9 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │   ├── CashFlowArchitecture.Api
 │   │   ├── CashFlowArchitecture.Api.csproj
 │   │   └── Program.cs
+│   ├── CashFlowArchitecture.Consolidation.Api
+│   │   ├── CashFlowArchitecture.Consolidation.Api.csproj
+│   │   └── Program.cs
 │   ├── CashFlowArchitecture.Core
 │   │   └── CashFlowArchitecture.Core.csproj
 │   ├── CashFlowArchitecture.Infrastructure
@@ -57,9 +60,12 @@ Pequenos comerciantes precisam registrar lançamentos de crédito e débito ao l
 │       ├── Dockerfile
 │       └── Program.cs
 └── tests
-    └── CashFlowArchitecture.Api.Tests
-        ├── CashFlowArchitecture.Api.Tests.csproj
-        └── FinancialEntryEndpointsTests.cs
+    ├── CashFlowArchitecture.Api.Tests
+    │   ├── CashFlowArchitecture.Api.Tests.csproj
+    │   └── FinancialEntryEndpointsTests.cs
+    └── CashFlowArchitecture.Consolidation.Api.Tests
+        ├── CashFlowArchitecture.Consolidation.Api.Tests.csproj
+        └── DailyBalanceEndpointsTests.cs
 ```
 
 ## Documentação
@@ -101,10 +107,16 @@ Para executar o projeto localmente, instale:
 
 ### Terminal
 
-Para executar a API localmente:
+Para executar a API de lançamentos localmente:
 
 ```bash
 dotnet run --project src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj
+```
+
+Para executar a API de consolidação localmente:
+
+```bash
+dotnet run --project src/CashFlowArchitecture.Consolidation.Api/CashFlowArchitecture.Consolidation.Api.csproj
 ```
 
 Para compilar a solução:
@@ -129,7 +141,8 @@ dotnet test CashFlowArchitecture.slnx --collect:"XPlat Code Coverage" --results-
 
 O arquivo `compose.yaml` prepara a aplicação e os serviços necessários para a execução local da arquitetura:
 
-- API .NET exposta localmente com Swagger.
+- API de lançamentos exposta localmente com Swagger.
+- API de consolidação exposta localmente com Swagger.
 - PostgreSQL 17 para persistência relacional.
 - Adminer para consulta web do PostgreSQL local.
 - RabbitMQ 4 com painel de gerenciamento para mensageria.
@@ -142,7 +155,7 @@ O arquivo `compose.yaml` prepara a aplicação e os serviços necessários para 
 
 #### Opção 1: executar infraestrutura no Docker e serviços pelo terminal ou F5
 
-Use esta opção quando quiser depurar a API pelo Visual Studio Code.
+Use esta opção quando quiser depurar as APIs pelo Visual Studio Code.
 
 Passo 1: criar o arquivo local de variáveis de ambiente.
 
@@ -158,7 +171,7 @@ Passo 2: subir PostgreSQL, Adminer, RabbitMQ e Redis.
 docker compose up -d postgres adminer rabbitmq redis
 ```
 
-Esse comando sobe apenas as dependências externas da API.
+Esse comando sobe apenas as dependências externas das APIs e do worker.
 
 Passo 3: restaurar as ferramentas locais do .NET.
 
@@ -176,7 +189,7 @@ dotnet tool run dotnet-ef database update --project src/CashFlowArchitecture.Inf
 
 Esse comando aplica as migrations do EF Core no banco `cash_flow`.
 
-Passo 5: executar a API pelo terminal ou pelo F5 do VS Code.
+Passo 5: executar a API de lançamentos pelo terminal ou pelo F5 do VS Code.
 
 ```bash
 dotnet run --project src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.csproj
@@ -185,16 +198,28 @@ dotnet run --project src/CashFlowArchitecture.Api/CashFlowArchitecture.Api.cspro
 Depois acesse:
 
 ```text
-Swagger: http://localhost:5099/swagger
+Swagger de lançamentos: http://localhost:5099/swagger
 ```
 
-Passo 6: executar o worker de consolidação em outro terminal, se quiser validar a consolidação automática fora do Docker Compose completo.
+Passo 6: executar a API de consolidação em outro terminal ou pelo F5 do VS Code.
+
+```bash
+dotnet run --project src/CashFlowArchitecture.Consolidation.Api/CashFlowArchitecture.Consolidation.Api.csproj
+```
+
+Depois acesse:
+
+```text
+Swagger de consolidação: http://localhost:5100/swagger
+```
+
+Passo 7: executar o worker de consolidação em outro terminal, se quiser validar a consolidação automática fora do Docker Compose completo.
 
 ```bash
 dotnet run --project src/CashFlowArchitecture.Worker/CashFlowArchitecture.Worker.csproj
 ```
 
-Sem o worker em execução, a API continua cadastrando lançamentos e publicando eventos no RabbitMQ, mas o saldo pode permanecer `PENDING` até o processamento acontecer.
+Sem o worker em execução, a API de lançamentos continua cadastrando lançamentos e publicando eventos no RabbitMQ, mas a API de consolidação pode retornar saldo `PENDING` até o processamento acontecer.
 
 #### Opção 2: executar tudo pelo Docker Compose
 
@@ -216,26 +241,29 @@ docker compose up -d --build
 
 Esse comando executa o fluxo completo:
 
-1. Constrói a imagem da API.
-2. Constrói a imagem do worker de consolidação.
-3. Constrói a imagem do serviço de migrations.
-4. Sobe o PostgreSQL.
-5. Aguarda o PostgreSQL ficar saudável.
-6. Sobe o Redis.
-7. Executa o container temporário `cash-flow-migrations`.
-8. Aplica as migrations do EF Core no banco `cash_flow`.
-9. Sobe o RabbitMQ.
-10. Sobe o Adminer.
-11. Sobe a API em container.
-12. Sobe o worker de consolidação em container separado.
+1. Constrói a imagem da API de lançamentos.
+2. Constrói a imagem da API de consolidação.
+3. Constrói a imagem do worker de consolidação.
+4. Constrói a imagem do serviço de migrations.
+5. Sobe o PostgreSQL.
+6. Aguarda o PostgreSQL ficar saudável.
+7. Sobe o Redis.
+8. Executa o container temporário `cash-flow-migrations`.
+9. Aplica as migrations do EF Core no banco `cash_flow`.
+10. Sobe o RabbitMQ.
+11. Sobe o Adminer.
+12. Sobe a API de lançamentos em container.
+13. Sobe a API de consolidação em container separado.
+14. Sobe o worker de consolidação em container separado.
 
 O Docker Compose pode iniciar alguns serviços independentes em paralelo. As dependências importantes ficam controladas no compose:
 
 1. O serviço `migrations` só executa depois que o PostgreSQL está saudável.
-2. A API só sobe depois que o PostgreSQL está saudável e o serviço `migrations` terminou com sucesso.
-3. O worker só sobe depois que o PostgreSQL está saudável, o RabbitMQ está saudável e o serviço `migrations` terminou com sucesso.
+2. A API de lançamentos só sobe depois que o PostgreSQL está saudável e o serviço `migrations` terminou com sucesso.
+3. A API de consolidação só sobe depois que o PostgreSQL e o Redis estão saudáveis e o serviço `migrations` terminou com sucesso.
+4. O worker só sobe depois que o PostgreSQL, o RabbitMQ e o Redis estão saudáveis e o serviço `migrations` terminou com sucesso.
 
-A API não depende do RabbitMQ para iniciar. Se o RabbitMQ estiver temporariamente indisponível, os eventos ficam pendentes na tabela `outbox_messages` e são publicados quando o canal de mensageria voltar.
+A API de lançamentos não depende do RabbitMQ nem da API de consolidação para iniciar. Se o RabbitMQ estiver temporariamente indisponível, os eventos ficam pendentes na tabela `outbox_messages` e são publicados quando o canal de mensageria voltar.
 
 O container `cash-flow-migrations` termina após aplicar as migrations. Isso é esperado. Ele não é uma aplicação contínua.
 
@@ -245,14 +273,15 @@ Passo 3: validar se os serviços subiram.
 docker compose ps
 ```
 
-O PostgreSQL, o RabbitMQ e o Redis devem aparecer como saudáveis. A API e o worker de consolidação devem aparecer em execução.
+O PostgreSQL, o RabbitMQ e o Redis devem aparecer como saudáveis. As duas APIs e o worker de consolidação devem aparecer em execução.
 
 Passo 4: acessar a aplicação e as ferramentas locais.
 
 Serviços disponíveis:
 
 ```text
-API Swagger: http://localhost:5099/swagger
+API de lançamentos Swagger: http://localhost:5099/swagger
+API de consolidação Swagger: http://localhost:5100/swagger
 PostgreSQL: localhost:5432
 Adminer: http://localhost:8080
 Redis: localhost:6379
@@ -303,13 +332,13 @@ Para acessar o PostgreSQL pelo Adminer, abra `http://localhost:8080` e preencha 
 
 O campo `System` precisa estar como `PostgreSQL`. Se ele ficar como `MySQL / MariaDB`, o Adminer tentará conectar usando o protocolo errado e exibirá erro como `Connection refused`.
 
-Connection string para a API executando fora do Docker, por exemplo via terminal ou F5 no VS Code:
+Connection string para as APIs executando fora do Docker, por exemplo via terminal ou F5 no VS Code:
 
 ```text
 Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password;GSS Encryption Mode=Disable
 ```
 
-Connection string do Redis para a API executando fora do Docker:
+Connection string do Redis para a API de consolidação executando fora do Docker:
 
 ```text
 localhost:6379,password=cash_flow_redis_password,abortConnect=false
@@ -360,7 +389,7 @@ O badge `Build and Test` no topo do README mostra o status do workflow na branch
 
 O resumo dos testes aparece na página da execução do workflow, sem precisar baixar o artefato apenas para ver quantos testes passaram ou falharam.
 
-Endpoints operacionais disponíveis:
+Endpoints operacionais disponíveis nas duas APIs:
 
 ```http
 GET /health
@@ -370,29 +399,41 @@ GET /health/ready
 
 Os endpoints de saúde são públicos para facilitar verificação de disponibilidade local.
 
-O endpoint `GET /health/live` indica se o processo da API está vivo.
+O endpoint `GET /health/live` indica se o processo da API consultada está vivo.
 
-O endpoint `GET /health/ready` indica se a API está pronta para operar:
+O endpoint `GET /health/ready` indica se a API consultada está pronta para operar.
+
+Na API de lançamentos:
 
 - PostgreSQL é dependência crítica, porque a API precisa dele para gravar lançamentos.
-- Redis é dependência não crítica, porque a API consegue consultar PostgreSQL se o cache falhar.
 - RabbitMQ é dependência não crítica, porque a Outbox permite publicar eventos depois.
+
+Na API de consolidação:
+
+- PostgreSQL é dependência crítica, porque a API precisa dele para consultar a fonte da verdade dos saldos.
+- Redis é dependência não crítica, porque a API de consolidação consegue consultar PostgreSQL se o cache falhar.
 
 Se uma dependência crítica falhar, o readiness retorna `503 Service Unavailable`. Se apenas dependências não críticas falharem, retorna `200 OK` com status `Degraded`.
 
-A API registra logs HTTP estruturados com método, rota, status code, duração e `correlationId`. API e worker escrevem logs no console em formato JSON, com timestamp em UTC. Os logs não devem registrar payloads, senhas ou API Keys.
+As APIs registram logs HTTP estruturados com método, rota, status code, duração e `correlationId`. APIs e worker escrevem logs no console em formato JSON, com timestamp em UTC. Os logs não devem registrar payloads, senhas ou API Keys.
 
-Documentação navegável da API em ambiente de desenvolvimento:
+Documentação navegável das APIs em ambiente de desenvolvimento:
 
 ```text
-http://localhost:5099/swagger
+API de lançamentos: http://localhost:5099/swagger
+API de consolidação: http://localhost:5100/swagger
 ```
 
-Endpoints de lançamentos disponíveis nesta etapa:
+Endpoints de lançamentos disponíveis na API de lançamentos:
 
 ```http
 POST /entries
 GET /entries?date=2026-09-01
+```
+
+Endpoints de saldo disponíveis na API de consolidação:
+
+```http
 POST /daily-balances/process-events
 GET /daily-balances/2026-09-01
 ```
@@ -433,7 +474,7 @@ Queue: cash-flow.entry-created
 Routing key: entry.created
 ```
 
-Quando executada no modo de armazenamento em arquivo, a API mantém uma cópia local temporária do evento em arquivo JSON:
+Quando executada no modo de armazenamento em arquivo, a API de lançamentos mantém uma cópia local temporária do evento em arquivo JSON:
 
 ```text
 src/CashFlowArchitecture.Api/data/integration-events.json
@@ -441,7 +482,7 @@ src/CashFlowArchitecture.Api/data/integration-events.json
 
 A pasta `data/` é ignorada pelo Git porque contém dados locais de execução.
 
-Esse arquivo local existe apenas como apoio de desenvolvimento para cenários sem PostgreSQL/RabbitMQ. Na execução principal com Docker Compose, o fluxo usa PostgreSQL, Outbox e RabbitMQ.
+Esse arquivo local existe apenas como apoio de desenvolvimento para cenários sem PostgreSQL/RabbitMQ. Para processamento manual em serviços separados, a API de consolidação precisa apontar para o mesmo caminho configurado em `Storage:IntegrationEventsPath`. Na execução principal com Docker Compose, o fluxo usa PostgreSQL, Outbox, RabbitMQ e worker.
 
 Após cadastrar um lançamento, a fila `cash-flow.entry-created` deve aparecer no RabbitMQ Management.
 
@@ -472,7 +513,7 @@ Para validar no painel:
 
 O worker `cash-flow-consolidation-worker` consome essa fila e atualiza o saldo consolidado no PostgreSQL.
 
-O Redis é usado como cache de leitura para o endpoint:
+O Redis é usado como cache de leitura para o endpoint da API de consolidação:
 
 ```http
 GET /daily-balances/2026-09-01
@@ -482,9 +523,9 @@ O PostgreSQL continua sendo a fonte da verdade. O fluxo esperado é:
 
 1. O worker consolida o saldo no PostgreSQL.
 2. Após consolidar, o worker atualiza o Redis com o saldo atualizado.
-3. A API consulta Redis primeiro ao receber `GET /daily-balances/{date}`.
-4. Se o saldo não estiver no Redis, a API consulta o PostgreSQL.
-5. Se o Redis estiver indisponível, a API continua consultando o PostgreSQL.
+3. A API de consolidação consulta Redis primeiro ao receber `GET /daily-balances/{date}`.
+4. Se o saldo não estiver no Redis, a API de consolidação consulta o PostgreSQL.
+5. Se o Redis estiver indisponível, a API de consolidação continua consultando o PostgreSQL.
 
 O TTL inicial do cache é de 15 minutos. Ele existe como proteção operacional para evitar saldo antigo preso indefinidamente se houver falha entre PostgreSQL e Redis. A atualização principal do cache acontece na consolidação, não pela expiração.
 
@@ -515,7 +556,7 @@ cash-flow:daily-balance:2026-09-02
 
 O Redis Commander é apenas uma ferramenta de desenvolvimento local. Ele não deve ser exposto em homologação, produção ou qualquer ambiente compartilhado sem controles adequados de rede, autenticação e autorização.
 
-Para validar a independência entre API e consolidação:
+Para validar a independência entre lançamentos e consolidação:
 
 1. Pare apenas o worker:
 
@@ -523,10 +564,10 @@ Para validar a independência entre API e consolidação:
 docker stop cash-flow-consolidation-worker
 ```
 
-2. Cadastre um lançamento pelo Swagger.
-3. Consulte o saldo da data cadastrada.
+2. Cadastre um lançamento pelo Swagger da API de lançamentos em `http://localhost:5099/swagger`.
+3. Consulte o saldo da data cadastrada pelo Swagger da API de consolidação em `http://localhost:5100/swagger`.
 
-Enquanto o worker estiver parado, a API continua registrando lançamentos, mas o saldo pode retornar `PENDING`.
+Enquanto o worker estiver parado, a API de lançamentos continua registrando lançamentos, mas o saldo pode retornar `PENDING`.
 
 4. Ligue novamente o worker:
 
@@ -537,6 +578,20 @@ docker compose up -d consolidation-worker
 5. Consulte o saldo novamente.
 
 Depois que o worker consumir a mensagem pendente, o saldo deve retornar `CONSOLIDATED`.
+
+Também é possível parar apenas a API de consolidação:
+
+```bash
+docker stop cash-flow-consolidation-api
+```
+
+Mesmo com a API de consolidação parada, a API de lançamentos em `http://localhost:5099/swagger` continua aceitando `POST /entries`. Isso demonstra que a escrita não depende da consulta de saldo para continuar operando.
+
+Para religar a API de consolidação:
+
+```bash
+docker compose up -d consolidation-api
+```
 
 O endpoint abaixo permanece disponível como apoio temporário para processamento manual durante o desenvolvimento:
 
@@ -603,6 +658,16 @@ Arquivo `.vscode/tasks.json`:
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "build-consolidation-api",
+      "command": "/usr/local/share/dotnet/dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/CashFlowArchitecture.Consolidation.Api/CashFlowArchitecture.Consolidation.Api.csproj"
+      ],
+      "problemMatcher": "$msCompile"
     }
   ]
 }
@@ -633,13 +698,39 @@ Arquivo `.vscode/launch.json`:
         "ASPNETCORE_URLS": "http://localhost:5099",
         "Authentication__ApiKey": "cash_flow_local_api_key",
         "ConnectionStrings__Postgres": "Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password;GSS Encryption Mode=Disable",
-        "ConnectionStrings__Redis": "localhost:6379,password=cash_flow_redis_password,abortConnect=false",
-        "Redis__InstanceName": "cash-flow:",
-        "Redis__DailyBalanceTtlMinutes": "15",
         "Outbox__BatchSize": "20",
         "Outbox__MaxRetryCount": "5",
         "Outbox__RetryDelaySeconds": "30",
         "Outbox__PublishIntervalSeconds": "5",
+        "DOTNET_ROOT": "/usr/local/share/dotnet",
+        "PATH": "/usr/local/share/dotnet:/usr/local/bin:/opt/homebrew/bin:${env:PATH}"
+      },
+      "sourceFileMap": {
+        "/Views": "${workspaceFolder}/Views"
+      }
+    },
+    {
+      "name": "Run CashFlowArchitecture.Consolidation.Api",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-consolidation-api",
+      "program": "${workspaceFolder}/src/CashFlowArchitecture.Consolidation.Api/bin/Debug/net10.0/CashFlowArchitecture.Consolidation.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/CashFlowArchitecture.Consolidation.Api",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/swagger"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5100",
+        "Authentication__ApiKey": "cash_flow_local_api_key",
+        "ConnectionStrings__Postgres": "Host=localhost;Port=5432;Database=cash_flow;Username=cash_flow_user;Password=cash_flow_password;GSS Encryption Mode=Disable",
+        "ConnectionStrings__Redis": "localhost:6379,password=cash_flow_redis_password,abortConnect=false",
+        "Redis__InstanceName": "cash-flow:",
+        "Redis__DailyBalanceTtlMinutes": "15",
         "DOTNET_ROOT": "/usr/local/share/dotnet",
         "PATH": "/usr/local/share/dotnet:/usr/local/bin:/opt/homebrew/bin:${env:PATH}"
       },
@@ -655,22 +746,31 @@ Depois disso:
 
 1. Abra o repositório no VS Code.
 2. Acesse a aba Run and Debug.
-3. Selecione `Run CashFlowArchitecture.Api`.
-4. Execute a aplicação.
-5. O VS Code deve abrir `http://localhost:5099/swagger` automaticamente.
+3. Selecione `Run CashFlowArchitecture.Api` para subir a API de lançamentos.
+4. Selecione `Run CashFlowArchitecture.Consolidation.Api` para subir a API de consolidação.
+5. O VS Code deve abrir o Swagger da configuração escolhida automaticamente.
 
 Se o navegador não abrir automaticamente, acesse manualmente:
 
 ```text
-http://localhost:5099/swagger
+API de lançamentos: http://localhost:5099/swagger
+API de consolidação: http://localhost:5100/swagger
 ```
 
-Para validar a saúde da API:
+Para validar a saúde da API de lançamentos:
 
 ```http
 GET http://localhost:5099/health
 GET http://localhost:5099/health/live
 GET http://localhost:5099/health/ready
+```
+
+Para validar a saúde da API de consolidação:
+
+```http
+GET http://localhost:5100/health
+GET http://localhost:5100/health/live
+GET http://localhost:5100/health/ready
 ```
 
 Para validar um endpoint protegido, informe o header `X-Api-Key`:

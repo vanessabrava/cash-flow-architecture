@@ -1,15 +1,14 @@
-using CashFlowArchitecture.Api.Common;
-using CashFlowArchitecture.Api.Contracts.Health;
-using CashFlowArchitecture.Infrastructure.Messaging;
+using CashFlowArchitecture.Consolidation.Api.Common;
+using CashFlowArchitecture.Consolidation.Api.Contracts.Health;
 using CashFlowArchitecture.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using RabbitMQ.Client;
+using Microsoft.Extensions.Caching.Distributed;
 
-namespace CashFlowArchitecture.Api.Endpoints;
+namespace CashFlowArchitecture.Consolidation.Api.Endpoints;
 
 internal static class HealthEndpoints
 {
-    private const string ServiceName = "cash-flow-api";
+    private const string ServiceName = "cash-flow-consolidation-api";
 
     public static void MapHealthEndpoints(this WebApplication app)
     {
@@ -25,7 +24,7 @@ internal static class HealthEndpoints
             return Results.Ok(response);
         })
         .WithName("GetHealth")
-        .WithSummary("Consulta a saúde básica da API.")
+        .WithSummary("Consulta a saúde básica da API de consolidação.")
         .WithDescription("Retorna o estado básico de disponibilidade da aplicação.");
 
         app.MapGet("/health/live", (HttpContext httpContext) =>
@@ -40,8 +39,8 @@ internal static class HealthEndpoints
             return Results.Ok(response);
         })
         .WithName("GetLiveness")
-        .WithSummary("Consulta o liveness da API.")
-        .WithDescription("Indica se o processo da API está vivo.");
+        .WithSummary("Consulta o liveness da API de consolidação.")
+        .WithDescription("Indica se o processo da API de consolidação está vivo.");
 
         app.MapGet("/health/ready", async (
             HttpContext httpContext,
@@ -64,7 +63,7 @@ internal static class HealthEndpoints
             else
             {
                 dependencies.Add(await CheckPostgresAsync(serviceProvider, cancellationToken));
-                dependencies.Add(await CheckRabbitMqAsync(configuration, cancellationToken));
+                dependencies.Add(await CheckRedisAsync(serviceProvider, cancellationToken));
             }
 
             var status = GetOverallStatus(dependencies);
@@ -80,8 +79,8 @@ internal static class HealthEndpoints
                 : Results.Ok(response);
         })
         .WithName("GetReadiness")
-        .WithSummary("Consulta o readiness da API.")
-        .WithDescription("Indica se a API está pronta para operar com suas dependências principais.");
+        .WithSummary("Consulta o readiness da API de consolidação.")
+        .WithDescription("Indica se a API de consolidação está pronta para consultar saldos.");
     }
 
     private static async Task<DependencyHealthResponse> CheckPostgresAsync(
@@ -103,31 +102,27 @@ internal static class HealthEndpoints
         }
     }
 
-    private static async Task<DependencyHealthResponse> CheckRabbitMqAsync(
-        IConfiguration configuration,
+    private static async Task<DependencyHealthResponse> CheckRedisAsync(
+        IServiceProvider serviceProvider,
         CancellationToken cancellationToken)
     {
         try
         {
-            var options = RabbitMqOptions.From(configuration);
-            var factory = new ConnectionFactory
-            {
-                HostName = options.HostName,
-                Port = options.Port,
-                UserName = options.UserName,
-                Password = options.Password,
-                VirtualHost = options.VirtualHost
-            };
+            var cache = serviceProvider.GetRequiredService<IDistributedCache>();
+            await cache.SetStringAsync(
+                "health:ready:consolidation-api",
+                DateTimeOffset.UtcNow.ToString("O"),
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(10)
+                },
+                cancellationToken);
 
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(2));
-
-            await using var connection = await factory.CreateConnectionAsync(timeout.Token);
-            return Healthy("rabbitmq", critical: false);
+            return Healthy("redis", critical: false);
         }
         catch (Exception exception)
         {
-            return Unhealthy("rabbitmq", critical: false, exception.Message);
+            return Unhealthy("redis", critical: false, exception.Message);
         }
     }
 

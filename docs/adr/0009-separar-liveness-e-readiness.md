@@ -8,7 +8,7 @@ Aceita
 
 Em ambientes com containers, orquestradores ou balanceadores, uma aplicação pode estar viva, mas ainda não estar pronta para receber tráfego.
 
-No caso desta solução, a API pode estar executando, mas não conseguir gravar lançamentos se o PostgreSQL estiver indisponível. Por outro lado, Redis e RabbitMQ possuem tratamento arquitetural específico: Redis tem fallback para PostgreSQL e RabbitMQ é desacoplado pela Outbox.
+No caso desta solução, uma API pode estar executando, mas ainda não estar pronta para sua responsabilidade principal. A API de lançamentos precisa do PostgreSQL para gravar. A API de consolidação precisa do PostgreSQL para consultar a fonte da verdade dos saldos e usa Redis como cache de leitura. O RabbitMQ é desacoplado da escrita pela Outbox.
 
 ## Decisão
 
@@ -16,15 +16,20 @@ Separar as verificações de saúde em três endpoints:
 
 | Endpoint | Uso |
 | --- | --- |
-| `GET /health` | Compatibilidade e verificação básica da API. |
-| `GET /health/live` | Indica se o processo da API está vivo. |
-| `GET /health/ready` | Indica se a API está pronta para operar com suas dependências. |
+| `GET /health` | Compatibilidade e verificação básica da API consultada. |
+| `GET /health/live` | Indica se o processo da API consultada está vivo. |
+| `GET /health/ready` | Indica se a API consultada está pronta para operar com suas dependências. |
 
-No readiness da API:
+No readiness da API de lançamentos:
 
 - PostgreSQL é dependência crítica, porque sem ele a API não consegue persistir lançamentos;
-- Redis é dependência não crítica, porque a API pode consultar PostgreSQL se o cache falhar;
 - RabbitMQ é dependência não crítica, porque a Outbox permite registrar eventos pendentes e publicar depois;
+- no modo de armazenamento em arquivo, a dependência crítica é o armazenamento local.
+
+No readiness da API de consolidação:
+
+- PostgreSQL é dependência crítica, porque sem ele a API não consegue consultar a fonte da verdade dos saldos;
+- Redis é dependência não crítica, porque a API pode consultar PostgreSQL se o cache falhar;
 - no modo de armazenamento em arquivo, a dependência crítica é o armazenamento local.
 
 Se uma dependência crítica falhar, o endpoint `/health/ready` retorna `503 Service Unavailable`. Se apenas dependências não críticas falharem, retorna `200 OK` com status `Degraded`.

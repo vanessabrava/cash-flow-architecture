@@ -26,11 +26,11 @@ Requisitos não funcionais descrevem qualidades, restrições e condições de o
 | RNF-003 | A solução deve registrar informações suficientes para rastrear operações importantes. |
 | RNF-004 | A solução deve permitir validação automatizada por testes. |
 | RNF-005 | A arquitetura deve favorecer separação de responsabilidades entre lançamento e consolidação. |
-| RNF-006 | A API e o worker devem poder executar em containers separados. |
+| RNF-006 | A API de lançamentos, a API de consolidação e o worker devem poder executar em containers separados. |
 | RNF-007 | A solução deve evitar duplicidade causada por retry na criação de lançamentos. |
 | RNF-008 | A solução deve reduzir o risco de perda de evento entre a gravação do lançamento e a publicação para consolidação. |
-| RNF-009 | A API deve expor verificações de liveness e readiness para apoiar operação em containers. |
-| RNF-010 | A API deve registrar logs estruturados com `correlationId`, rota, status e duração das requisições. |
+| RNF-009 | As APIs devem expor verificações de liveness e readiness para apoiar operação em containers. |
+| RNF-010 | As APIs devem registrar logs estruturados com `correlationId`, rota, status e duração das requisições. |
 
 ## Dados Iniciais de Um Lançamento
 

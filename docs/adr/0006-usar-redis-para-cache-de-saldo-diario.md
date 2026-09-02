@@ -12,9 +12,9 @@ Mesmo assim, consultas repetidas para a mesma data podem gerar carga desnecessá
 
 ## Decisão
 
-Usar Redis como cache de leitura para o endpoint `GET /daily-balances/{date}`, mantendo o PostgreSQL como fonte da verdade.
+Usar Redis como cache de leitura para o endpoint `GET /daily-balances/{date}` da API de consolidação, mantendo o PostgreSQL como fonte da verdade.
 
-A atualização principal do cache acontece quando a consolidação processa um evento e atualiza o saldo diário. A consulta pela API usa Redis primeiro e recorre ao PostgreSQL quando o cache não possui a data solicitada ou quando o Redis está indisponível.
+A atualização principal do cache acontece quando a consolidação processa um evento e atualiza o saldo diário. A consulta pela API de consolidação usa Redis primeiro e recorre ao PostgreSQL quando o cache não possui a data solicitada ou quando o Redis está indisponível.
 
 Regras da decisão:
 
@@ -23,11 +23,11 @@ Regras da decisão:
 - saldos pendentes não são cacheados nesta etapa;
 - o worker de consolidação atualiza o Redis após consolidar o saldo no PostgreSQL;
 - o endpoint manual `POST /daily-balances/process-events` também atualiza o Redis enquanto existir como apoio de desenvolvimento;
-- a API consulta Redis antes de consultar PostgreSQL;
+- a API de consolidação consulta Redis antes de consultar PostgreSQL;
 - o cache usa TTL maior, configurado inicialmente em 15 minutos;
 - o TTL existe como proteção operacional contra cache antigo preso, não como mecanismo principal de atualização;
-- falha no Redis não deve indisponibilizar a API;
-- se o Redis estiver indisponível, a API consulta o PostgreSQL diretamente.
+- falha no Redis não deve indisponibilizar a API de consolidação;
+- se o Redis estiver indisponível, a API de consolidação consulta o PostgreSQL diretamente.
 
 ## Consequências Positivas
 

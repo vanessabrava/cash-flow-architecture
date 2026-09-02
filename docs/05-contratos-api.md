@@ -1,6 +1,6 @@
 # Contratos de API
 
-Este documento descreve os contratos HTTP definidos para as capacidades principais da solução. Parte desses contratos já está implementada na API e parte serve como referência para evolução do desafio.
+Este documento descreve os contratos HTTP definidos para as capacidades principais da solução. Os contratos são separados entre API de Lançamentos e API de Saldo Consolidado.
 
 ## Convenções
 
@@ -43,12 +43,12 @@ Em uma evolução real da solução, a autenticação e autorização devem avan
 
 ### Endpoints Protegidos
 
-| Endpoint | Autenticação |
-| --- | --- |
-| `POST /entries` | Requer `X-Api-Key`. |
-| `GET /entries?date=YYYY-MM-DD` | Requer `X-Api-Key`. |
-| `POST /daily-balances/process-events` | Requer `X-Api-Key`. |
-| `GET /daily-balances/{date}` | Requer `X-Api-Key`. |
+| Serviço | Endpoint | Autenticação |
+| --- | --- | --- |
+| API de Lançamentos | `POST /entries` | Requer `X-Api-Key`. |
+| API de Lançamentos | `GET /entries?date=YYYY-MM-DD` | Requer `X-Api-Key`. |
+| API de Saldo Consolidado | `POST /daily-balances/process-events` | Requer `X-Api-Key`. |
+| API de Saldo Consolidado | `GET /daily-balances/{date}` | Requer `X-Api-Key`. |
 
 ### Erro de Autenticação
 
@@ -86,6 +86,12 @@ X-Correlation-Id: 4a11b94c-45b7-4a48-9cb4-917ecf2c7f31
 ## API de Lançamentos
 
 Responsável por registrar e consultar lançamentos financeiros.
+
+Na execução local, essa API é exposta em:
+
+```text
+http://localhost:5099/swagger
+```
 
 ### Criar Lançamento
 
@@ -223,6 +229,12 @@ GET /entries?date=2026-09-01
 
 Responsável por consultar o saldo diário consolidado.
 
+Na execução local, essa API é exposta em:
+
+```text
+http://localhost:5100/swagger
+```
+
 ### Processar Eventos de Consolidação
 
 ```http
@@ -246,7 +258,7 @@ POST /daily-balances/process-events
 
 Esse endpoint representa um processamento local simplificado dos eventos `EntryCreated`. Ele permanece disponível como apoio temporário para desenvolvimento e diagnóstico.
 
-Na implementação atual, a consolidação assíncrona principal é executada pelo worker `cash-flow-consolidation-worker`, que consome eventos do RabbitMQ. Quando a aplicação roda no modo de armazenamento em arquivo, a API mantém uma cópia local temporária em JSON para permitir o processamento manual durante a evolução do desafio.
+Na implementação atual, a consolidação assíncrona principal é executada pelo worker `cash-flow-consolidation-worker`, que consome eventos do RabbitMQ. Quando a aplicação roda no modo de armazenamento em arquivo, a API de lançamentos pode gravar eventos em JSON e a API de consolidação pode processar esse mesmo arquivo quando ambas apontarem para o mesmo `Storage:IntegrationEventsPath`.
 
 ### Consultar Saldo Diário
 

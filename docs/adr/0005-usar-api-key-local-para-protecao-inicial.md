@@ -6,7 +6,7 @@ Aceita
 
 ## Contexto
 
-A API já expõe endpoints de negócio para criação e consulta de lançamentos financeiros, além de consulta e processamento de saldo diário.
+As APIs expõem endpoints de negócio para criação e consulta de lançamentos financeiros, além de consulta e processamento de saldo diário.
 
 Mesmo em um desafio técnico, esses endpoints não devem ficar totalmente abertos, porque isso enfraquece a leitura de segurança da solução. Ao mesmo tempo, implementar uma solução completa de identidade, autorização por escopo, emissão de tokens e integração com provedor externo aumentaria o escopo sem ser o foco principal do desafio.
 
@@ -18,18 +18,20 @@ Proteger os endpoints de negócio usando o header `X-Api-Key`.
 
 Endpoints protegidos:
 
-| Endpoint | Regra |
-| --- | --- |
-| `POST /entries` | Exige `X-Api-Key`. |
-| `GET /entries?date=YYYY-MM-DD` | Exige `X-Api-Key`. |
-| `POST /daily-balances/process-events` | Exige `X-Api-Key`. |
-| `GET /daily-balances/{date}` | Exige `X-Api-Key`. |
+| Serviço | Endpoint | Regra |
+| --- | --- | --- |
+| API de Lançamentos | `POST /entries` | Exige `X-Api-Key`. |
+| API de Lançamentos | `GET /entries?date=YYYY-MM-DD` | Exige `X-Api-Key`. |
+| API de Saldo Consolidado | `POST /daily-balances/process-events` | Exige `X-Api-Key`. |
+| API de Saldo Consolidado | `GET /daily-balances/{date}` | Exige `X-Api-Key`. |
 
 Endpoints públicos:
 
 | Endpoint | Motivo |
 | --- | --- |
 | `GET /health` | Permite verificar disponibilidade básica da aplicação. |
+| `GET /health/live` | Permite verificar se o processo da API está vivo. |
+| `GET /health/ready` | Permite verificar se a API está pronta para operar com suas dependências. |
 | `/swagger` | Permite testar a API em ambiente de desenvolvimento. |
 
 A chave local padrão fica documentada em `.env.example` e no `README.md`, apenas para desenvolvimento.

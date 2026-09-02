@@ -1,9 +1,9 @@
-using CashFlowArchitecture.Api.Common;
-using CashFlowArchitecture.Api.Contracts.DailyBalances;
+using CashFlowArchitecture.Consolidation.Api.Common;
+using CashFlowArchitecture.Consolidation.Api.Contracts.DailyBalances;
 using CashFlowArchitecture.Core.Abstractions;
 using CashFlowArchitecture.Infrastructure;
 
-namespace CashFlowArchitecture.Api.Endpoints;
+namespace CashFlowArchitecture.Consolidation.Api.Endpoints;
 
 internal static class DailyBalanceEndpoints
 {
@@ -53,7 +53,7 @@ internal static class DailyBalanceEndpoints
                     correlationId,
                     date,
                     "PENDING",
-                "Saldo diario ainda nao consolidado."));
+                    "Saldo diario ainda nao consolidado."));
         }
 
         cache.Set(balance);
